@@ -16,7 +16,9 @@ if not exist "node_modules" (
     call npm install --loglevel=error
 )
 
-echo Iniciando WA Scheduler...
+echo WA Scheduler iniciando...
 echo Abre tu navegador en: http://localhost:3001
+echo Para detener el servidor, cierra esta ventana.
 echo.
 node src/index.js
+pause
