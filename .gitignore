@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Sesión de WhatsApp (contiene credenciales sensibles)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Base de datos local
+data/
+
+# Variables de entorno
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
