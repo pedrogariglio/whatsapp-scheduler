@@ -95,16 +95,22 @@ function isClientReady() {
 client.on('message_create', (message) => {
     if (!message.fromMe) return;
     if (message.hasQuotedMsg) return;
-  
-    // El chat con uno mismo tiene id.remote en formato @lid (identificador interno)
-    // Los mensajes del scheduler a terceros tienen id.remote en formato @c.us
-    // Este es el filtro definitivo para distinguir ambos casos
-    const ownId = client.info.wid._serialized;
-    if(message.id.remote !== ownId) return;
-  
-    //console.log('📨 Comando detectado | Texto:', message.body);
-    handleMessage(message, client);
-  });
+
+    const ownSerialized = client.info.wid._serialized;
+    const ownLid = client.info.wid._serialized
+      .replace('@c.us', '@lid');
+
+
+  const remote = message.id.remote;
+  const isOwnChat =
+    remote === ownSerialized ||
+    remote.endsWith('@lid') && message.from === ownSerialized;
+
+  if (!isOwnChat) return;
+
+  handleMessage(message, client);
+});
+
 
 // Inicializar el cliente
 //client.initialize();
