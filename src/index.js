@@ -32,18 +32,24 @@ app.use((req, res) => {
   res.status(404).json({ ok: false, error: 'Ruta no encontrada' });
 });
 
-// Arranque
-app.listen(PORT, () => {
-  console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/health\n`);
+
+// Inicializar la base de datos y el servidor
+
+const { initDB } = require('./db');
+
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`   Health check: http://localhost:${PORT}/health\n`);
+  });
+
+  console.log('🌐 Inicializando cliente WhatsApp Web...');
+  client.initialize();
+  startScheduler();
+}).catch(err => {
+  console.error('❌ Error iniciando la base de datos:', err);
+  process.exit(1);
 });
-
-// Inicializa WhatsApp Web (abre Chromium en background)
-console.log('🌐 Inicializando cliente WhatsApp Web...');
-client.initialize();
-
-// Inicia el scheduler de envíos
-startScheduler();
 
 // Manejo limpio de cierre (Ctrl+C en Windows)
 process.on('SIGINT', async () => {
