@@ -26,11 +26,17 @@ if %errorLevel% neq 0 (
     echo      Esto puede tardar varios minutos.
     echo.
 
-    powershell -Command "Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi' -OutFile '%TEMP%\node_installer.msi'"
+    :: Intentar descarga con curl.exe (incluido en Windows 10/11)
+    curl.exe -L -o "%TEMP%\node_installer.msi" "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
 
     if %errorLevel% neq 0 (
-        echo [ERROR] No se pudo descargar Node.js.
-        echo         Verifica tu conexion a internet e intenta de nuevo.
+        echo.
+        echo [ERROR] No se pudo descargar Node.js automaticamente.
+        echo.
+        echo  Descargalo manualmente desde:
+        echo  https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi
+        echo.
+        echo  Instalalo y luego vuelve a ejecutar este instalador.
         pause
         exit /b 1
     )
@@ -38,12 +44,16 @@ if %errorLevel% neq 0 (
     echo      Instalando Node.js...
     msiexec /i "%TEMP%\node_installer.msi" /qn /norestart
 
+    :: Actualizar PATH para la sesion actual
     set "PATH=%PATH%;%ProgramFiles%\nodejs"
 
     node --version >nul 2>&1
     if %errorLevel% neq 0 (
-        echo      Node.js instalado. Es necesario reiniciar la PC.
+        echo.
+        echo      Node.js instalado correctamente.
+        echo      Es necesario reiniciar la PC para continuar.
         echo      Reinicia y vuelve a ejecutar este instalador.
+        echo.
         pause
         exit /b 1
     )
@@ -60,6 +70,7 @@ echo.
 cd /d "%~dp0"
 call npm install --loglevel=error
 if %errorLevel% neq 0 (
+    echo.
     echo [ERROR] Fallo la instalacion de dependencias.
     echo         Verifica tu conexion a internet e intenta de nuevo.
     pause
