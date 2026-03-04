@@ -26,7 +26,6 @@ if %errorLevel% neq 0 (
     echo      Esto puede tardar varios minutos.
     echo.
 
-    :: Intentar descarga con curl.exe (incluido en Windows 10/11)
     curl.exe -L -o "%TEMP%\node_installer.msi" "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
 
     if %errorLevel% neq 0 (
@@ -41,8 +40,20 @@ if %errorLevel% neq 0 (
         exit /b 1
     )
 
-    echo      Instalando Node.js...
-    msiexec /i "%TEMP%\node_installer.msi" /qn /norestart
+    echo.
+    echo      Descarga completada.
+    echo      Se abrira el instalador de Node.js.
+    echo      Sigue los pasos: Next - Next - Install - Finish
+    echo.
+    pause
+
+    :: Instalacion visual (el usuario hace clic en Next/Install)
+    msiexec /i "%TEMP%\node_installer.msi"
+
+    echo.
+    echo      Una vez que el instalador termine y hayas
+    echo      hecho clic en Finish, presiona una tecla aqui.
+    pause
 
     :: Actualizar PATH para la sesion actual
     set "PATH=%PATH%;%ProgramFiles%\nodejs"
@@ -50,8 +61,7 @@ if %errorLevel% neq 0 (
     node --version >nul 2>&1
     if %errorLevel% neq 0 (
         echo.
-        echo      Node.js instalado correctamente.
-        echo      Es necesario reiniciar la PC para continuar.
+        echo      Node.js instalado. Es necesario reiniciar la PC.
         echo      Reinicia y vuelve a ejecutar este instalador.
         echo.
         pause
