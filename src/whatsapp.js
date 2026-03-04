@@ -13,7 +13,10 @@ const client = new Client({
     // headless: true → sin ventana del navegador
     // En Windows, headless: 'new' es más estable en versiones recientes
     headless: true,
-    executablePath: '/usr/bin/chromium-browser',
+    // En Linux utilizo el Chromium del sistema, en Windows el de Puppeteer
+    ...(process.platform === 'linux' && {
+      executablePath: '/usr/bin/chromium-browser',
+    }),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
