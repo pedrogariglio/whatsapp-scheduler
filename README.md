@@ -24,7 +24,7 @@ Incluye una API REST, un bot conversacional en WhatsApp y una interfaz web para 
 | Servidor | Node.js + Express |
 | WhatsApp Web | whatsapp-web.js |
 | Scheduler | node-cron |
-| Base de datos | SQLite (better-sqlite3) |
+| Base de datos | SQLite (sql.js) |
 | Interfaz web | HTML + CSS + JS vanilla |
 
 ---
