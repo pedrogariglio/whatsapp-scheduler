@@ -45,19 +45,27 @@ Incluye una API REST, un bot conversacional en WhatsApp y una interfaz web para 
 git clone https://github.com/tu-usuario/whatsapp-scheduler.git
 cd whatsapp-scheduler
 ```
+### 2. Instalar Node.js (solo si no lo tenés instalado)
+Doble clic en `instalar_nodejs.bat`
 
-### 2. Ejecutar el instalador (solo la primera vez)
+El instalador:
+- Verifica si Node.js  ya está instalado
+- Si no está, lo descarga automáticamente (~25MB)
+- Abre el instalador visual — seguir los pasos: **Next → Next → Install → Finish**
+
+> Si ya tenés Node.js instalado podés saltear este paso.
+
+### 3. Ejecutar el instalador principal (solo la primera vez)
 
 Clic derecho en `instalar.bat` → **Ejecutar como administrador**
 
 El instalador:
-- Verifica e instala Node.js 20 LTS si no está presente
-- Instala las dependencias del proyecto
+- Verifica Node.js
+- Instala las dependencias del proyecto (puede tardar entre 5 y 15 minutos — no cerrar la ventana)
+- Crea el archivo `.env`
 - Configura el arranque automático con Windows
 
-> Si Node.js se instala por primera vez, puede ser necesario reiniciar la PC antes de continuar.
-
-### 3. Primer arranque
+### 4. Primer arranque
 
 Doble clic en `iniciar.bat`
 
