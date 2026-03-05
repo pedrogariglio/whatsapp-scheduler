@@ -22,52 +22,13 @@ if %errorLevel% neq 0 (
 echo [1/4] Verificando Node.js...
 node --version >nul 2>&1
 if %errorLevel% neq 0 (
-    echo      Node.js no encontrado. Descargando...
-    echo      Esto puede tardar varios minutos.
     echo.
-
-    curl.exe -L -o "%TEMP%\node_installer.msi" "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
-
-    if %errorLevel% neq 0 (
-        echo.
-        echo [ERROR] No se pudo descargar Node.js automaticamente.
-        echo.
-        echo  Descargalo manualmente desde:
-        echo  https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi
-        echo.
-        echo  Instalalo y luego vuelve a ejecutar este instalador.
-        pause
-        exit /b 1
-    )
-
-    echo.
-    echo      Descarga completada.
-    echo      Se abrira el instalador de Node.js.
-    echo      Sigue los pasos: Next - Next - Install - Finish
+    echo      Node.js no encontrado.
+    echo      Ejecuta primero "instalar_nodejs.bat" y luego
+    echo      vuelve a ejecutar este instalador.
     echo.
     pause
-
-    :: Instalacion visual (el usuario hace clic en Next/Install)
-    msiexec /i "%TEMP%\node_installer.msi"
-
-    echo.
-    echo      Una vez que el instalador termine y hayas
-    echo      hecho clic en Finish, presiona una tecla aqui.
-    pause
-
-    :: Actualizar PATH para la sesion actual
-    set "PATH=%PATH%;%ProgramFiles%\nodejs"
-
-    node --version >nul 2>&1
-    if %errorLevel% neq 0 (
-        echo.
-        echo      Node.js instalado. Es necesario reiniciar la PC.
-        echo      Reinicia y vuelve a ejecutar este instalador.
-        echo.
-        pause
-        exit /b 1
-    )
-    echo      Node.js instalado correctamente.
+    exit /b 1
 ) else (
     for /f "tokens=*" %%v in ('node --version') do echo      Node.js %%v ya instalado. OK
 )
@@ -75,10 +36,13 @@ if %errorLevel% neq 0 (
 :: Instalar dependencias npm
 echo.
 echo [2/4] Instalando dependencias...
-echo      La primera vez puede tardar varios minutos.
+echo.
+echo      IMPORTANTE: Este paso puede tardar entre 5 y 15 minutos.
+echo      Se esta descargando el navegador interno (Chromium ~170MB).
+echo      No cierres esta ventana aunque parezca que no hace nada.
 echo.
 cd /d "%~dp0"
-call npm install --loglevel=error
+call npm install
 if %errorLevel% neq 0 (
     echo.
     echo [ERROR] Fallo la instalacion de dependencias.
@@ -86,9 +50,10 @@ if %errorLevel% neq 0 (
     pause
     exit /b 1
 )
+echo.
 echo      Dependencias instaladas. OK
 
-:: Crear archivo .env si no existe
+:: Eliminar sesion anterior si existe (evita conflictos al vincular)
 echo.
 echo [3/4] Configurando entorno...
 if not exist ".env" (
@@ -96,6 +61,11 @@ if not exist ".env" (
     echo      Archivo .env creado. OK
 ) else (
     echo      Archivo .env ya existe. OK
+)
+
+if exist ".wwebjs_auth" (
+    rmdir /s /q ".wwebjs_auth"
+    echo      Sesion anterior eliminada para evitar conflictos. OK
 )
 
 :: Configurar inicio automatico con Windows
@@ -118,11 +88,8 @@ echo.
 echo ==========================================
 echo        Instalacion completada
 echo.
-echo  El sistema arrancara automaticamente
-echo  cuando inicies Windows.
-echo.
-echo  Para arrancarlo ahora:
-echo  - Doble clic en "iniciar.bat"
+echo  Ahora ejecuta "iniciar.bat" para arrancar
+echo  el sistema y escanear el codigo QR.
 echo ==========================================
 echo.
 pause
