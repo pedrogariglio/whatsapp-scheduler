@@ -556,6 +556,33 @@
     checkStatus();
     loadMessages();
   }, 30000);
+
+  // ── SSE: notificaciones en tiempo real ──
+function initSSE() {
+  const evtSource = new EventSource('/api/messages/events');
+
+  evtSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.type === 'sent') {
+      showToast(`✓ Mensaje #${data.id} enviado a +${data.phone}`);
+      // Recargar lista para reflejar el nuevo estado
+      loadMessages();
+    }
+
+    if (data.type === 'failed') {
+      showToast(`✗ Mensaje #${data.id} falló: ${data.error}`, 'error');
+      loadMessages();
+    }
+  };
+
+  evtSource.onerror = () => {
+    // Reconexión automática — el navegador lo maneja solo
+  };
+}
+
+// Llamar en el init
+initSSE();
 </script>
 </body>
 </html>

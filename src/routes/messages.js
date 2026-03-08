@@ -75,4 +75,33 @@ router.delete('/:id', (req, res) => {
   return res.json({ ok: true, message: `Mensaje #${id} eliminado` });
 });
 
+const { addSseClient, removeSseClient } = require('../scheduler');
+
+// GET /api/events — Server-Sent Events para notificaciones en tiempo real
+router.get('/events', (req, res) => {
+  // Headers necesarios para SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Registrar cliente
+  addSseClient(res);
+
+  // Ping cada 30 segundos para mantener la conexión viva
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': ping\n\n');
+    } catch {
+      clearInterval(keepAlive);
+    }
+  }, 30000);
+
+  // Cuando el navegador cierra la pestaña, limpiar
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    removeSseClient(res);
+  });
+});
+
 module.exports = router;
