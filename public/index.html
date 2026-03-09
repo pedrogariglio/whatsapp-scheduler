@@ -293,6 +293,33 @@
       font-size: 11px;
       letter-spacing: 0.1em;
     }
+
+    /* ── FILE INPUT ── */
+.file-input-wrapper {
+  position: relative;
+  border: 1px dashed var(--border);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  background: var(--bg);
+}
+.file-input-wrapper:hover { border-color: var(--accent); }
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+}
+.file-label {
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.file-label.selected { color: var(--text); }
   </style>
 </head>
 <body>
@@ -333,6 +360,15 @@
         <div class="field">
           <label>Fecha y hora de envío</label>
           <input type="datetime-local" id="scheduledAt" />
+        </div>
+
+        <div class="field">
+          <label>Adjunto (opcional)</label>
+          <div class="file-input-wrapper" id="fileWrapper">
+            <input type="file" id="attachment" accept=".jpg,.jpeg,.png,.gif,.pdf,.docx,.xlsx,.doc,.xls" />
+            <div class="file-label" id="fileLabel">Seleccionar imagen o documento...</div>
+          </div>
+          <div class="hint">JPG, PNG, GIF, PDF, DOCX, XLSX — máx. 16MB</div>
         </div>
 
         <button type="submit" class="btn btn-primary" id="submitBtn">
@@ -441,12 +477,25 @@
   }
 
   // ── PROGRAMAR MENSAJE ──
+  document.getElementById('attachment').addEventListener('change', () => {
+    const file = document.getElementById('attachment').files[0];
+    const label = document.getElementById('fileLabel');
+    if (file) {
+      label.textContent = file.name;
+      label.classList.add('selected');
+    } else {
+      label.textContent = 'Seleccionar imagen o documento...';
+      label.classList.remove('selected');
+    }
+  });
+
   document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const phone       = document.getElementById('phone').value.trim();
     const message     = document.getElementById('message').value.trim();
     const scheduledAt = document.getElementById('scheduledAt').value;
+    const file        = document.getElementById('attachment').files[0];
     const btn         = document.getElementById('submitBtn');
 
     if (!phone || !message || !scheduledAt) {
@@ -458,10 +507,15 @@
     btn.textContent = 'Programando...';
 
     try {
+      const formData = new FormData();
+      formData.append('phone', phone);
+      formData.append('message', message);
+      formData.append('scheduledAt', new Date(scheduledAt).toISOString());
+      if (file) formData.append('attachment', file);
+
       const r = await fetch(`${API}/api/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, message, scheduledAt: new Date(scheduledAt).toISOString() }) // Convertir a ISO 8601
+        body: formData,
       });
       const d = await r.json();
 
@@ -473,8 +527,8 @@
 
       showToast(`✓ Mensaje #${d.message.id} programado`);
       document.getElementById('scheduleForm').reset();
-
-      // Cambiar a tab pendientes y recargar
+      document.getElementById('fileLabel').textContent = 'Seleccionar imagen o documento...';
+      document.getElementById('fileLabel').classList.remove('selected');
       setTab('pending');
 
     } catch {
@@ -484,7 +538,7 @@
       btn.textContent = 'Programar envío';
     }
   });
-
+  
   // ── ELIMINAR MENSAJE ──
   async function deleteMessage(id) {
     if (!confirm(`¿Cancelar el mensaje #${id}?`)) return;

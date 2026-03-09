@@ -1,8 +1,10 @@
 const cron = require('node-cron');
+const fs = require('fs');
+const { MessageMedia } = require('whatsapp-web.js');
 const db = require('./db');
-const { sendMessage, isClientReady } = require('./whatsapp');
+const { sendMessage, isClientReady, getClient } = require('./whatsapp');
 
-// Clientes SSE conectados (cada pestaña del navegador es un cliente)
+// Clientes SSE conectados
 const sseClients = new Set();
 
 function addSseClient(res) {
@@ -13,7 +15,6 @@ function removeSseClient(res) {
   sseClients.delete(res);
 }
 
-// Emitir evento a todos los clientes conectados
 function emitEvent(type, data) {
   const payload = `data: ${JSON.stringify({ type, ...data })}\n\n`;
   sseClients.forEach(client => {
@@ -36,11 +37,20 @@ function startScheduler() {
 
     for (const msg of pending) {
       try {
-        await sendMessage(msg.phone, msg.message);
+        if (msg.attachment_path && fs.existsSync(msg.attachment_path)) {
+          // Enviar mensaje con adjunto
+          const media = MessageMedia.fromFilePath(msg.attachment_path);
+          const client = getClient();
+          const chatId = `${msg.phone}@c.us`;
+          await client.sendMessage(chatId, media, { caption: msg.message });
+        } else {
+          // Enviar mensaje de texto normal
+          await sendMessage(msg.phone, msg.message);
+        }
+
         db.markAsSent(msg.id);
         console.log(`✅ Mensaje #${msg.id} enviado a ${msg.phone}`);
 
-        // Notificar éxito a la Web UI
         emitEvent('sent', {
           id: msg.id,
           phone: msg.phone,
@@ -51,7 +61,6 @@ function startScheduler() {
         db.markAsFailed(msg.id);
         console.error(`❌ Mensaje #${msg.id} falló:`, error.message);
 
-        // Notificar fallo a la Web UI
         emitEvent('failed', {
           id: msg.id,
           phone: msg.phone,

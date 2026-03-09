@@ -114,8 +114,11 @@ client.on('message_create', (message) => {
   handleMessage(message, client);
 });
 
+function getClient() {
+  return client;
+}
 
 // Inicializar el cliente
 //client.initialize();
 
-module.exports = { client, sendMessage, isClientReady, getOwnerNumber: () => ownerNumber };
+module.exports = { client, sendMessage, isClientReady, getClient, getOwnerNumber: () => ownerNumber };
