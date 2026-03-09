@@ -2,18 +2,15 @@ const { handleMessage, setOwnerNumber } = require('./bot');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
+const fs = require('fs');
 
 // LocalAuth guarda la sesión en .wwebjs_auth/
-// así no tenés que escanear el QR cada vez que reiniciás
 const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: path.join(__dirname, '..', '.wwebjs_auth'),
   }),
   puppeteer: {
-    // headless: true → sin ventana del navegador
-    // En Windows, headless: 'new' es más estable en versiones recientes
     headless: true,
-    // En Linux utilizo el Chromium del sistema, en Windows el de Puppeteer
     ...(process.platform === 'linux' && {
       executablePath: '/usr/bin/chromium-browser',
     }),
@@ -27,34 +24,52 @@ const client = new Client({
   },
 });
 
-// Estado de conexión (para que el scheduler sepa si puede enviar)
 let isReady = false;
-// Número del propio usuario — el bot solo escucha mensajes de él mismo.
 let ownerNumber = null;
 
+// Cache de contactos en memoria
+let contactsCache = null;
+
+function clearContactsCache() {
+  contactsCache = null;
+}
+
 client.on('qr', (qr) => {
-    console.log('\n📱 Escaneá este QR con WhatsApp en tu celular:\n');
-    qrcode.generate(qr, { small: true });
-    console.log('\nRuta: WhatsApp > Dispositivos vinculados > Vincular dispositivo\n');
+  console.log('\n📱 Escaneá este QR con WhatsApp en tu celular:\n');
+  qrcode.generate(qr, { small: true });
+  console.log('\nRuta: WhatsApp > Dispositivos vinculados > Vincular dispositivo\n');
 });
 
 client.on('authenticated', () => {
-    console.log('✅ Autenticado correctamente. Sesión guardada.');
+  console.log('✅ Autenticado correctamente. Sesión guardada.');
 });
 
 client.on('ready', () => {
-    isReady = true;
-    ownerNumber = client.info.wid.user; // guarda en variable del módulo
-    console.log('🟢 WhatsApp Web listo para enviar mensajes.');
-    // para debug, puedo ver el _serialized de mi propio número
-    //console.log('wid completo:', JSON.stringify(client.info.wid)) 
-    setOwnerNumber(ownerNumber);
-  });
+  isReady = true;
+  ownerNumber = client.info.wid.user;
+  console.log('🟢 WhatsApp Web listo para enviar mensajes.');
+  setOwnerNumber(ownerNumber);
+
+  // Pre-cargar contactos en cache al arrancar
+  getContacts().then(c => console.log(`📒 ${c.length} contactos cargados en cache.`));
+});
 
 client.on('disconnected', (reason) => {
   isReady = false;
+  clearContactsCache();
   console.warn('🔴 Cliente desconectado:', reason);
-  // Intento de reconexión automática
+
+  // Si el usuario cerró sesión desde el móvil, borrar la sesión guardada
+  if (reason === 'LOGOUT') {
+    const authPath = path.join(__dirname, '..', '.wwebjs_auth');
+    if (fs.existsSync(authPath)) {
+      fs.rmSync(authPath, { recursive: true, force: true });
+      console.log('🗑️  Sesion eliminada. Reinicia para escanear el QR de nuevo.');
+    }
+    return; // No reconectar automaticamente tras logout
+  }
+
+  // Reconexión automática solo si fue desconexión inesperada
   setTimeout(() => {
     console.log('🔄 Intentando reconectar...');
     client.initialize();
@@ -66,20 +81,11 @@ client.on('auth_failure', (msg) => {
   console.error('Borrá la carpeta .wwebjs_auth y reiniciá para escanear el QR de nuevo.');
 });
 
-/**
- * Envía un mensaje de WhatsApp.
- * @param {string} phone - Número sin + ni espacios, con código de país. Ej: "5491112345678"
- * @param {string} message - Texto del mensaje
- * @returns {Promise<void>}
- */
 async function sendMessage(phone, message) {
   if (!isReady) {
     throw new Error('El cliente de WhatsApp no está listo todavía.');
   }
-
-  // whatsapp-web.js espera el formato: "5491112345678@c.us"
   const chatId = `${phone}@c.us`;
-
   try {
     await client.sendMessage(chatId, message);
     console.log(`📤 Mensaje enviado a ${phone}`);
@@ -92,18 +98,17 @@ async function sendMessage(phone, message) {
 function isClientReady() {
   return isReady;
 }
-// Evento para detectar mensajes propios en el chat con uno mismo, si el mensaje es del scheduler, se procesa.
-// Los chats con terceros usan id.remote en formato @c.us
-// El chat con uno mismo tiene id.remote en formato @lid (identificador interno)
+
+// Evento para detectar mensajes propios en el chat con uno mismo.
+// Comparación exacta contra el propio @c.us y @lid — nunca contra cualquier @lid.
 client.on('message_create', (message) => {
   if (!message.fromMe) return;
   if (message.hasQuotedMsg) return;
 
-  const ownCus = client.info.wid._serialized;           // ej: 549xxx@c.us
-  const ownLid = ownCus.replace('@c.us', '@lid');        // ej: 549xxx@lid
+  const ownCus = client.info.wid._serialized;      // ej: 549xxx@c.us
+  const ownLid = ownCus.replace('@c.us', '@lid');   // ej: 549xxx@lid
   const remote = message.id.remote;
 
-  // Solo procesar si el chat es con uno mismo (ambos formatos posibles)
   const isOwnChat = remote === ownCus || remote === ownLid;
   if (!isOwnChat) return;
 
@@ -117,23 +122,23 @@ function getClient() {
 async function getContacts() {
   if (!isReady) return [];
 
+  // Devolver cache si ya existe
+  if (contactsCache) return contactsCache;
+
   const [contacts, chats] = await Promise.all([
     client.getContacts(),
     client.getChats(),
   ]);
 
-  const seen = new Map(); // name → contact
+  const seen = new Map();
 
-  // Primero agregar contactos de agenda
   for (const c of contacts) {
     if (!c.name || c.isGroup || c.isMe || !c.number) continue;
-    // Preferir números que empiecen con dígitos locales (descartar @lid internos)
     if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
       seen.set(c.name, { name: c.name, phone: c.number });
     }
   }
 
-  // Luego agregar chats recientes que no estén en agenda
   for (const c of chats) {
     if (c.isGroup || !c.name || !c.id.user) continue;
     if (!seen.has(c.name)) {
@@ -141,10 +146,8 @@ async function getContacts() {
     }
   }
 
-  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  contactsCache = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return contactsCache;
 }
-
-// Inicializar el cliente
-//client.initialize();
 
 module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber };
