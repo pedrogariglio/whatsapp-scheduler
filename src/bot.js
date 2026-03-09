@@ -18,13 +18,9 @@ function setOwnerNumber(number) {
  * Se llama desde index.js al registrar el evento 'message'.
  */
 async function handleMessage(message, client) {
-  // Solo procesar mensajes enviados por el propio usuario a sí mismo
-  const senderId = message.from.replace('@c.us', '');
+  const senderId = message.from.replace('@c.us', '').replace('@lid', '');
   
   if (!ownerNumber || senderId !== ownerNumber) return;
-
-  // Solo mensajes de chat individual (ignorar grupos)
-  if (message.from.includes('@g.us')) return;
 
   const text = message.body.trim();
   const session = sessions[senderId] || { step: 'idle', data: {} };

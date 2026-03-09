@@ -26,6 +26,7 @@ const client = new Client({
 
 let isReady = false;
 let ownerNumber = null;
+let ownerLid = null;
 
 // Cache de contactos en memoria
 let contactsCache = null;
@@ -47,10 +48,9 @@ client.on('authenticated', () => {
 client.on('ready', () => {
   isReady = true;
   ownerNumber = client.info.wid.user;
+  ownerLid = client.info.wid._serialized.replace('@c.us', '@lid'); // puede no coincidir
   console.log('🟢 WhatsApp Web listo para enviar mensajes.');
   setOwnerNumber(ownerNumber);
-
-  // Pre-cargar contactos en cache al arrancar
   getContacts().then(c => console.log(`📒 ${c.length} contactos cargados en cache.`));
 });
 
@@ -99,20 +99,30 @@ function isClientReady() {
   return isReady;
 }
 
-// Evento para detectar mensajes propios en el chat con uno mismo.
-// Comparación exacta contra el propio @c.us y @lid — nunca contra cualquier @lid.
-client.on('message_create', (message) => {
+// Flag para evitar loop: mientras el bot está respondiendo, ignorar nuevos mensajes
+let botIsReplying = false;
+
+client.on('message_create', async (message) => {
   if (!message.fromMe) return;
   if (message.hasQuotedMsg) return;
+  if (botIsReplying) return;
 
-  const ownCus = client.info.wid._serialized;      // ej: 549xxx@c.us
-  const ownLid = ownCus.replace('@c.us', '@lid');   // ej: 549xxx@lid
+  const ownCus = client.info.wid._serialized;
   const remote = message.id.remote;
+  const from = message.from;
 
-  const isOwnChat = remote === ownCus || remote === ownLid;
+  // Es el chat con uno mismo si:
+  // - remote es mi propio @c.us, O
+  // - remote es cualquier @lid Y from es mi propio @c.us
+  const isOwnChat = remote === ownCus || (remote.endsWith('@lid') && from === ownCus);
   if (!isOwnChat) return;
 
-  handleMessage(message, client);
+  botIsReplying = true;
+  try {
+    await handleMessage(message, client);
+  } finally {
+    setTimeout(() => { botIsReplying = false; }, 1000);
+  }
 });
 
 function getClient() {
