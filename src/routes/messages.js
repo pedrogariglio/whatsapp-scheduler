@@ -5,6 +5,7 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('../db');
 
+
 // Carpeta de uploads
 const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);

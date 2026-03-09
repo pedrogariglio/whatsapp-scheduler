@@ -1,8 +1,8 @@
 require('dotenv').config();
 
+const { client, getContacts } = require('./whatsapp');
 const express = require('express');
 const path = require('path');
-const { client } = require('./whatsapp');
 const { startScheduler } = require('./scheduler');
 const messagesRouter = require('./routes/messages');
 
@@ -22,6 +22,17 @@ app.get('/health', (req, res) => {
     whatsappReady: isClientReady(),
     timestamp: new Date().toISOString(),
   });
+});
+
+// GET /api/contacts — Lista de contactos para el buscador
+app.get('/api/contacts', async (req, res) => {
+  try {
+    const contacts = await getContacts();
+    return res.json({ ok: true, count: contacts.length, contacts });
+  } catch (error) {
+    console.error('Error obteniendo contactos:', error);
+    return res.status(500).json({ ok: false, error: 'Error al obtener contactos' });
+  }
 });
 
 // Rutas de la API

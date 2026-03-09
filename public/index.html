@@ -295,31 +295,76 @@
     }
 
     /* ── FILE INPUT ── */
-.file-input-wrapper {
-  position: relative;
-  border: 1px dashed var(--border);
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-  background: var(--bg);
+  .file-input-wrapper {
+    position: relative;
+    border: 1px dashed var(--border);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    background: var(--bg);
+  }
+  .file-input-wrapper:hover { border-color: var(--accent); }
+  .file-input-wrapper input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+  }
+  .file-label {
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events: none;
+    text-align: center;
 }
-.file-input-wrapper:hover { border-color: var(--accent); }
-.file-input-wrapper input[type="file"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-}
-.file-label {
-  font-size: 11px;
-  color: var(--muted);
-  pointer-events: none;
-}
-.file-label.selected { color: var(--text); }
+  .file-label.selected { color: var(--text); }
+
+  /* ── CONTACT SEARCH ── */
+  .search-wrapper { position: relative; }
+  .search-wrapper input { padding-right: 32px; }
+  .search-clear {
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 14px; padding: 0;
+    display: none;
+  }
+  .suggestions {
+    position: absolute;
+    top: 100%; left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 50;
+    display: none;
+  }
+  .suggestions.open { display: block; }
+  .suggestion-item {
+    padding: 9px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover { background: var(--border); }
+  .suggestion-name { color: var(--text); }
+  .suggestion-phone { color: var(--muted); font-size: 10px; }
+  .suggestions-empty {
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
   </style>
 </head>
 <body>
@@ -342,14 +387,25 @@
 
         <div class="field">
           <label>Destinatario</label>
+          <div class="search-wrapper">
+            <input
+              type="text"
+              id="contactSearch"
+              placeholder="Buscar por nombre..."
+              autocomplete="off"
+            />
+            <button type="button" class="search-clear" id="searchClear">✕</button>
+            <div class="suggestions" id="suggestions"></div>
+          </div>
           <input
             type="text"
             id="phone"
             placeholder="5491112345678"
             maxlength="15"
             autocomplete="off"
+            style="margin-top: 6px;"
           />
-          <div class="hint">Código de país + número, sin + ni espacios</div>
+          <div class="hint">Buscá por nombre o ingresá el número directamente</div>
         </div>
 
         <div class="field">
@@ -599,11 +655,81 @@
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('scheduledAt').min = now.toISOString().slice(0,16);
   }
+  // ── BUSCADOR DE CONTACTOS ──
+  let allContacts = [];
+
+  async function loadContacts() {
+    try {
+      const r = await fetch('/api/contacts');
+      const d = await r.json();
+      if (d.ok) allContacts = d.contacts;
+    } catch {
+      allContacts = [];
+    }
+  }
+
+  function renderSuggestions(query) {
+    const box = document.getElementById('suggestions');
+    const clear = document.getElementById('searchClear');
+
+    if (!query) {
+      box.classList.remove('open');
+      clear.style.display = 'none';
+      return;
+    }
+
+    clear.style.display = 'block';
+    const q = query.toLowerCase();
+    const matches = allContacts.filter(c =>
+      c.name.toLowerCase().includes(q) || c.phone.includes(q)
+    ).slice(0, 8);
+
+    if (matches.length === 0) {
+      box.innerHTML = '<div class="suggestions-empty">Sin resultados</div>';
+    } else {
+      box.innerHTML = matches.map(c => `
+        <div class="suggestion-item" data-phone="${c.phone}">
+          <span class="suggestion-name">${escapeHtml(c.name)}</span>
+          <span class="suggestion-phone">+${c.phone}</span>
+        </div>
+      `).join('');
+
+      box.querySelectorAll('.suggestion-item').forEach(el => {
+        el.addEventListener('click', () => {
+          document.getElementById('phone').value = el.dataset.phone;
+          document.getElementById('contactSearch').value = el.querySelector('.suggestion-name').textContent;
+          box.classList.remove('open');
+          document.getElementById('searchClear').style.display = 'block';
+        });
+      });
+    }
+
+    box.classList.add('open');
+  }
+
+  document.getElementById('contactSearch').addEventListener('input', (e) => {
+    renderSuggestions(e.target.value.trim());
+  });
+
+  document.getElementById('searchClear').addEventListener('click', () => {
+    document.getElementById('contactSearch').value = '';
+    document.getElementById('phone').value = '';
+    document.getElementById('suggestions').classList.remove('open');
+    document.getElementById('searchClear').style.display = 'none';
+  });
+
+  // Cerrar sugerencias al hacer clic fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) {
+      document.getElementById('suggestions').classList.remove('open');
+    }
+  });
 
   // ── INIT ──
   setMinDate();
   checkStatus();
   loadMessages();
+  loadContacts();
 
   // Refresco automático cada 30 segundos
   setInterval(() => {

@@ -118,7 +118,37 @@ function getClient() {
   return client;
 }
 
+async function getContacts() {
+  if (!isReady) return [];
+
+  const [contacts, chats] = await Promise.all([
+    client.getContacts(),
+    client.getChats(),
+  ]);
+
+  const seen = new Map(); // name → contact
+
+  // Primero agregar contactos de agenda
+  for (const c of contacts) {
+    if (!c.name || c.isGroup || c.isMe || !c.number) continue;
+    // Preferir números que empiecen con dígitos locales (descartar @lid internos)
+    if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
+      seen.set(c.name, { name: c.name, phone: c.number });
+    }
+  }
+
+  // Luego agregar chats recientes que no estén en agenda
+  for (const c of chats) {
+    if (c.isGroup || !c.name || !c.id.user) continue;
+    if (!seen.has(c.name)) {
+      seen.set(c.name, { name: c.name, phone: c.id.user });
+    }
+  }
+
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Inicializar el cliente
 //client.initialize();
 
-module.exports = { client, sendMessage, isClientReady, getClient, getOwnerNumber: () => ownerNumber };
+module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber };
