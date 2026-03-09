@@ -96,19 +96,15 @@ function isClientReady() {
 // Los chats con terceros usan id.remote en formato @c.us
 // El chat con uno mismo tiene id.remote en formato @lid (identificador interno)
 client.on('message_create', (message) => {
-    if (!message.fromMe) return;
-    if (message.hasQuotedMsg) return;
+  if (!message.fromMe) return;
+  if (message.hasQuotedMsg) return;
 
-    const ownSerialized = client.info.wid._serialized;
-    const ownLid = client.info.wid._serialized
-      .replace('@c.us', '@lid');
-
-
+  const ownCus = client.info.wid._serialized;           // ej: 549xxx@c.us
+  const ownLid = ownCus.replace('@c.us', '@lid');        // ej: 549xxx@lid
   const remote = message.id.remote;
-  const isOwnChat =
-    remote === ownSerialized ||
-    remote.endsWith('@lid') && message.from === ownSerialized;
 
+  // Solo procesar si el chat es con uno mismo (ambos formatos posibles)
+  const isOwnChat = remote === ownCus || remote === ownLid;
   if (!isOwnChat) return;
 
   handleMessage(message, client);
