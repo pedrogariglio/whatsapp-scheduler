@@ -17,12 +17,11 @@ if not exist "node_modules" (
 
 :: Cerrar cualquier instancia previa en el puerto 3001
 echo Verificando puerto 3001...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3001 " ^| findstr "LISTENING"') do (
-    echo Cerrando instancia previa (PID %%a)...
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":3001 " ^| findstr "LISTENING"') do (
+    echo Cerrando instancia previa PID %%a...
     taskkill /PID %%a /F >nul 2>&1
 )
 
-:: Pequena pausa para asegurar que el puerto quedo libre
 timeout /t 2 /nobreak >nul
 
 echo.
