@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WA Scheduler — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0e0e0e;
+      --surface:  #161616;
+      --border:   #2a2a2a;
+      --accent:   #25d366;
+      --accent-dim:#1a9e4a;
+      --danger:   #e05252;
+      --text:     #e8e8e8;
+      --muted:    #666;
+      --mono:     'IBM Plex Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 40px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .logo span { color: var(--muted); font-weight: 400; }
+
+    .field { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .btn {
+      width: 100%;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 10px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.15s;
+    }
+    .btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error {
+      font-size: 11px;
+      color: var(--danger);
+      margin-top: 12px;
+      text-align: center;
+      min-height: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="logo">WA<span>/</span>Scheduler</div>
+
+  <div class="field">
+    <label>Usuario</label>
+    <input type="text" id="username" autocomplete="username" />
+  </div>
+
+  <div class="field">
+    <label>Contraseña</label>
+    <input type="password" id="password" autocomplete="current-password" />
+  </div>
+
+  <button class="btn" id="loginBtn" onclick="doLogin()">Ingresar</button>
+
+  <div class="error" id="errorMsg"></div>
+</div>
+
+<script>
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    errorMsg.textContent = '';
+
+    if (!username || !password) {
+      errorMsg.textContent = 'Completá todos los campos';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Ingresando...';
+
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const d = await r.json();
+
+      if (d.ok) {
+        window.location.href = '/';
+      } else {
+        errorMsg.textContent = 'Usuario o contraseña incorrectos';
+      }
+    } catch {
+      errorMsg.textContent = 'Error al conectar con el servidor';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Ingresar';
+    }
+  }
+</script>
+</body>
+</html>
