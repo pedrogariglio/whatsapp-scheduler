@@ -37,6 +37,11 @@ async function initDB() {
   } catch {
     // columna ya existe
   }
+  try {
+    db.run("ALTER TABLE messages ADD COLUMN retry_count INTEGER DEFAULT 0");
+  } catch {
+    // columna ya existe
+  }
 
   saveToDisk();
   console.log('Base de datos lista.');
@@ -123,6 +128,22 @@ function parseRows(result) {
   });
 }
 
+function incrementRetry(id) {
+  db.run("UPDATE messages SET retry_count = retry_count + 1 WHERE id = ?", [id]);
+  saveToDisk();
+}
+
+function getRetryCount(id) {
+  const result = db.exec("SELECT retry_count FROM messages WHERE id = ?", [id]);
+  if (!result.length) return 0;
+  return result[0].values[0][0] || 0;
+}
+
+function markAsRetrying(id) {
+  db.run("UPDATE messages SET status = 'retrying' WHERE id = ?", [id]);
+  saveToDisk();
+}
+
 module.exports = {
   initDB,
   createMessage,
@@ -133,4 +154,7 @@ module.exports = {
   markAsSent,
   markAsFailed,
   deleteMessage,
+  incrementRetry,
+  getRetryCount,
+  markAsRetrying,
 };
