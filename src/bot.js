@@ -1,11 +1,6 @@
 const db = require('./db');
 
-// Almacena el estado de la conversación por número de usuario
-// Estructura: { "5491112345678": { step: 'esperando_numero', data: {} } }
 const sessions = {};
-
-// Número del propio usuario — el bot solo escucha mensajes de él mismo.
-// Se detecta automáticamente cuando el cliente está listo.
 let ownerNumber = null;
 
 function setOwnerNumber(number) {
@@ -13,23 +8,18 @@ function setOwnerNumber(number) {
   console.log(`🤖 Bot activo. Escuchando mensajes de: ${number}`);
 }
 
-/**
- * Punto de entrada principal. Recibe cada mensaje entrante.
- * Se llama desde index.js al registrar el evento 'message'.
- */
 async function handleMessage(message, client) {
   const senderId = message.from.replace('@c.us', '').replace('@lid', '');
-  
+
   if (!ownerNumber || senderId !== ownerNumber) return;
+  if (message.from.includes('@g.us')) return;
 
   const text = message.body.trim();
   const session = sessions[senderId] || { step: 'idle', data: {} };
 
-  // --- Comandos directos (disponibles en cualquier momento) ---
-
   if (text === '/agendar') {
     sessions[senderId] = { step: 'esperando_numero', data: {} };
-    await reply(message, 
+    await reply(message, client,
       '📱 ¿A qué número querés enviar el mensaje?\n' +
       'Con código de país, sin + ni espacios.\n' +
       'Ejemplo: _5491112345678_'
@@ -38,45 +28,43 @@ async function handleMessage(message, client) {
   }
 
   if (text === '/pendientes') {
-    await handlePendientes(message);
+    await handlePendientes(message, client);
     return;
   }
 
   if (text.startsWith('/cancelar')) {
-    await handleCancelar(message, text);
+    await handleCancelar(message, client, text);
     return;
   }
 
   if (text === '/ayuda' || text === '/start') {
-    await handleAyuda(message);
+    await handleAyuda(message, client);
     return;
   }
 
-  // --- Flujo conversacional de /agendar ---
-
   if (session.step === 'esperando_numero') {
     if (!/^\d{7,15}$/.test(text)) {
-      await reply(message,
+      await reply(message, client,
         '❌ Número inválido. Solo dígitos, sin + ni espacios.\n' +
         'Ejemplo: _5491112345678_'
       );
       return;
     }
     sessions[senderId] = { step: 'esperando_mensaje', data: { phone: text } };
-    await reply(message, '💬 ¿Cuál es el mensaje que querés enviar?');
+    await reply(message, client, '💬 ¿Cuál es el mensaje que querés enviar?');
     return;
   }
 
   if (session.step === 'esperando_mensaje') {
     if (text.length === 0) {
-      await reply(message, '❌ El mensaje no puede estar vacío.');
+      await reply(message, client, '❌ El mensaje no puede estar vacío.');
       return;
     }
     sessions[senderId] = {
       step: 'esperando_fecha',
       data: { ...session.data, message: text },
     };
-    await reply(message,
+    await reply(message, client,
       '🕐 ¿Cuándo querés enviarlo?\n' +
       'Formato: _DD/MM/YYYY HH:MM_\n' +
       'Ejemplo: _28/02/2026 09:00_'
@@ -87,25 +75,22 @@ async function handleMessage(message, client) {
   if (session.step === 'esperando_fecha') {
     const scheduledAt = parseFecha(text);
     if (!scheduledAt) {
-      await reply(message,
+      await reply(message, client,
         '❌ Fecha inválida. Usá el formato: _DD/MM/YYYY HH:MM_\n' +
         'Ejemplo: _28/02/2026 09:00_'
       );
       return;
     }
     if (scheduledAt <= new Date()) {
-      await reply(message, '❌ La fecha debe ser futura.');
+      await reply(message, client, '❌ La fecha debe ser futura.');
       return;
     }
 
-    // Guardar en BD
     const { phone, message: msgText } = session.data;
     const newMsg = db.createMessage(phone, msgText, scheduledAt.toISOString());
-
-    // Limpiar sesión
     sessions[senderId] = { step: 'idle', data: {} };
 
-    await reply(message,
+    await reply(message, client,
       `✅ *Mensaje programado correctamente*\n\n` +
       `📱 Para: ${phone}\n` +
       `💬 Mensaje: ${msgText}\n` +
@@ -115,17 +100,14 @@ async function handleMessage(message, client) {
     return;
   }
 
-  // Si no coincide con nada, mostrar ayuda
-  await handleAyuda(message);
+  await handleAyuda(message, client);
 }
 
-// --- Handlers de comandos ---
-
-async function handlePendientes(message) {
+async function handlePendientes(message, client) {
   const pendientes = db.getPendingMessagesList();
 
   if (pendientes.length === 0) {
-    await reply(message, '📋 No tenés mensajes pendientes.');
+    await reply(message, client, '📋 No tenés mensajes pendientes.');
     return;
   }
 
@@ -134,44 +116,44 @@ async function handlePendientes(message) {
     return `🔖 *#${m.id}* → ${m.phone}\n💬 ${m.message}\n🕐 ${fecha}`;
   });
 
-  await reply(message,
+  await reply(message, client,
     `📋 *Mensajes pendientes (${pendientes.length}):*\n\n` +
     lines.join('\n\n')
   );
 }
 
-async function handleCancelar(message, text) {
+async function handleCancelar(message, client, text) {
   const parts = text.split(' ');
   const id = parseInt(parts[1], 10);
 
   if (isNaN(id)) {
-    await reply(message, '❌ Uso correcto: /cancelar _<id>_\nEjemplo: /cancelar 3');
+    await reply(message, client, '❌ Uso correcto: /cancelar _<id>_\nEjemplo: /cancelar 3');
     return;
   }
 
   const msg = db.getMessageById(id);
 
   if (!msg) {
-    await reply(message, `❌ No existe ningún mensaje con ID #${id}.`);
+    await reply(message, client, `❌ No existe ningún mensaje con ID #${id}.`);
     return;
   }
 
   if (msg.status === 'sent') {
-    await reply(message, `❌ El mensaje #${id} ya fue enviado, no se puede cancelar.`);
+    await reply(message, client, `❌ El mensaje #${id} ya fue enviado, no se puede cancelar.`);
     return;
   }
 
   if (msg.status === 'failed') {
-    await reply(message, `❌ El mensaje #${id} ya está marcado como fallido.`);
+    await reply(message, client, `❌ El mensaje #${id} ya está marcado como fallido.`);
     return;
   }
 
   db.deleteMessage(id);
-  await reply(message, `🗑️ Mensaje *#${id}* cancelado correctamente.`);
+  await reply(message, client, `🗑️ Mensaje *#${id}* cancelado correctamente.`);
 }
 
-async function handleAyuda(message) {
-  await reply(message,
+async function handleAyuda(message, client) {
+  await reply(message, client,
     `🤖 *WhatsApp Scheduler Bot*\n\n` +
     `Comandos disponibles:\n\n` +
     `📅 */agendar* — Programar un mensaje nuevo\n` +
@@ -181,19 +163,13 @@ async function handleAyuda(message) {
   );
 }
 
-// --- Utilidades ---
-
-function reply(message, text) {
-    // Enviar al chat del usuario sin usar el método reply para evitar el loop infinito
-    return message.getChat().then(chat => chat.sendMessage(text));
+function reply(message, client, text) {
+  // Enviar siempre al chat propio usando el cliente directamente
+  const ownChatId = message.from;
+  return client.sendMessage(ownChatId, text);
 }
 
-/**
- * Convierte "28/02/2026 09:00" a objeto Date.
- * Retorna null si el formato es inválido.
- */
 function parseFecha(text) {
-  // Acepta DD/MM/YYYY HH:MM o DD/MM/YYYY HH:MM:SS
   const match = text.match(
     /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/
   );
@@ -202,15 +178,11 @@ function parseFecha(text) {
   const [, dd, mm, yyyy, hh, min, ss = '00'] = match;
   const date = new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`);
 
-  // Verificar que la fecha sea válida (ej: 31/02 daría Invalid Date)
   if (isNaN(date.getTime())) return null;
 
   return date;
 }
 
-/**
- * Formatea un objeto Date a "28/02/2026 09:00"
- */
 function formatFecha(date) {
   const pad = (n) => String(n).padStart(2, '0');
   return (
