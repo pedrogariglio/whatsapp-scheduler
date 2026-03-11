@@ -91,7 +91,7 @@ function getPendingMessages() {
 
 function getPendingMessagesList() {
   const result = db.exec(
-    "SELECT * FROM messages WHERE status = 'pending' ORDER BY scheduled_at ASC"
+    "SELECT * FROM messages WHERE status IN ('pending', 'retrying') ORDER BY scheduled_at ASC"
   );
   return parseRows(result);
 }

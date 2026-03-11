@@ -365,6 +365,12 @@
     font-size: 11px;
     color: var(--muted);
   }
+
+    /* ── CHAR COUNTER ── */
+  #charCount.warning { color: #f0a500; }
+  #charCount.danger  { color: var(--danger); }
+
+  .badge-retrying { background: #1a1200; color: #f0a500; border: 1px solid #2a2000; }
   </style>
 </head>
 <body>
@@ -406,11 +412,15 @@
             style="margin-top: 6px;"
           />
           <div class="hint">Buscá por nombre o ingresá el número directamente</div>
+          <div class="hint" id="phoneHint" style="color: var(--danger); display: none;">
+            ⚠ El número debe incluir el prefijo internacional (ej: 549 para Argentina)
+          </div>
         </div>
 
         <div class="field">
           <label>Mensaje</label>
-          <textarea id="message" placeholder="Escribí el mensaje..."></textarea>
+          <textarea id="message" placeholder="Escribí el mensaje..." maxlength="4000"></textarea>
+          <div class="hint" id="charCount">0 / 4000 caracteres</div>
         </div>
 
         <div class="field">
@@ -440,6 +450,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="pending">Pendientes</button>
       <button class="tab" data-tab="all">Historial</button>
+      <button class="btn-sort" id="sortBtn" title="Ordenar" style="display:none; margin-left:auto; margin-right:12px; background:none; border:none; color:var(--muted); cursor:pointer; font-family:var(--mono); font-size:11px;">↓ ID</button>
     </div>
     <div class="panel-header" style="border-top: none;">
       <span id="listLabel">Mensajes pendientes</span>
@@ -484,6 +495,7 @@
   // ── CARGAR MENSAJES ──
   async function loadMessages() {
     const list = document.getElementById('msgList');
+    
     list.innerHTML = '<div class="loading">cargando...</div>';
 
     try {
@@ -492,6 +504,11 @@
         : '/api/messages';
       const r = await fetch(`${API}${endpoint}`);
       const d = await r.json();
+
+      // Sort by ID
+      const sorted = [...d.messages].sort((a, b) =>
+        sortOrder === 'desc' ? b.id - a.id : a.id - b.id
+      );
 
       document.getElementById('msgCount').textContent = d.count;
       document.getElementById('listLabel').textContent =
@@ -506,7 +523,7 @@
         return;
       }
 
-      list.innerHTML = d.messages.map(m => `
+      list.innerHTML = sorted.map(m => `
         <div class="msg-item" id="msg-${m.id}">
           <div>
             <div class="msg-phone">+${m.phone}</div>
@@ -533,10 +550,28 @@
   }
 
   // ── PROGRAMAR MENSAJE ──
+  // ── CHAR COUNTER ──
+  document.getElementById('message').addEventListener('input', () => {
+    const len = document.getElementById('message').value.length;
+    const counter = document.getElementById('charCount');
+    counter.textContent = `${len} / 4000 caracteres`;
+    counter.className = 'hint' + (len > 3800 ? ' danger' : len > 3500 ? ' warning' : '');
+  });
+
+  // ── FILE INPUT ──
   document.getElementById('attachment').addEventListener('change', () => {
     const file = document.getElementById('attachment').files[0];
     const label = document.getElementById('fileLabel');
+
     if (file) {
+      // Validate file size client-side
+      if (file.size > 16 * 1024 * 1024) {
+        showToast('El archivo supera el límite de 16MB', 'error');
+        document.getElementById('attachment').value = '';
+        label.textContent = 'Seleccionar imagen o documento...';
+        label.classList.remove('selected');
+        return;
+      }
       label.textContent = file.name;
       label.classList.add('selected');
     } else {
@@ -548,14 +583,28 @@
   document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const phone       = document.getElementById('phone').value.trim();
+    const phone       = document.getElementById('phone').value.trim().replace(/[\s+\-]/g, '');
     const message     = document.getElementById('message').value.trim();
     const scheduledAt = document.getElementById('scheduledAt').value;
     const file        = document.getElementById('attachment').files[0];
     const btn         = document.getElementById('submitBtn');
 
+    // Client-side validations
     if (!phone || !message || !scheduledAt) {
       showToast('Completá todos los campos', 'error');
+      return;
+    }
+    if (!/^\d{10,15}$/.test(phone) || phone.startsWith('0')) {
+      showToast('Número inválido — incluí el prefijo internacional (ej: 549 para Argentina)', 'error');
+      document.getElementById('phoneHint').style.display = 'block';
+      return;
+    }
+    if (message.length > 4000) {
+      showToast('El mensaje no puede superar los 4000 caracteres', 'error');
+      return;
+    }
+    if (file && file.size > 16 * 1024 * 1024) {
+      showToast('El archivo supera el límite de 16MB', 'error');
       return;
     }
 
@@ -585,6 +634,8 @@
       document.getElementById('scheduleForm').reset();
       document.getElementById('fileLabel').textContent = 'Seleccionar imagen o documento...';
       document.getElementById('fileLabel').classList.remove('selected');
+      document.getElementById('charCount').textContent = '0 / 4000 caracteres';
+      document.getElementById('charCount').className = 'hint';
       setTab('pending');
 
     } catch {
@@ -593,6 +644,27 @@
       btn.disabled = false;
       btn.textContent = 'Programar envío';
     }
+  });
+
+  // ── PHONE PREFIX WARNING ──
+  document.getElementById('phone').addEventListener('input', () => {
+    const phone = document.getElementById('phone').value.trim().replace(/[\s+\-]/g, '');
+    const hint = document.getElementById('phoneHint');
+    // Warning if number looks local (less than 10 digits or starts with 0)
+    if (phone.length > 0 && (phone.startsWith('0') || (phone.length < 10 && phone.length > 0))) {
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  });
+
+  // ── SORT ──
+  let sortOrder = 'desc';
+
+  document.getElementById('sortBtn').addEventListener('click', () => {
+    sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+    document.getElementById('sortBtn').textContent = sortOrder === 'desc' ? '↓ ID' : '↑ ID';
+    loadMessages();
   });
   
   // ── ELIMINAR MENSAJE ──
@@ -620,6 +692,7 @@
     document.querySelectorAll('.tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
+    document.getElementById('sortBtn').style.display = tab === 'all' ? 'block' : 'none';
     loadMessages();
   }
 
