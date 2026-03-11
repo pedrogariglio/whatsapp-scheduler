@@ -13,10 +13,16 @@ const app = express();
 // Load config
 const configPath = path.join(__dirname, '..', 'config.json');
 if (!fs.existsSync(configPath)) {
-  console.error('❌ config.json not found. Copy config.example.json and set your credentials.');
-  process.exit(1);
+  fs.writeFileSync(configPath, JSON.stringify({ firstRun: true, auth: { username: '', password: '' } }, null, 2));
 }
-const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+function getConfig() {
+  return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+}
+
+function saveConfig(config) {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
 
 // Middleware
 app.use(express.json());
@@ -27,14 +33,25 @@ app.use(session({
   cookie: { httpOnly: true },
 }));
 
-// Auth middleware — protects all routes except /auth and /login.html
+// Auth middleware
 function requireAuth(req, res, next) {
+  const config = getConfig();
+
+  // First run — only allow setup routes
+  if (config.firstRun) {
+    const allowedPaths = ['/setup.html', '/auth/setup'];
+    if (allowedPaths.includes(req.path)) return next();
+    if (req.path === '/' || !req.path.startsWith('/api/')) {
+      return res.redirect('/setup.html');
+    }
+    return res.status(403).json({ ok: false, error: 'Setup required' });
+  }
+
   const publicPaths = ['/auth/login', '/login.html'];
   if (publicPaths.includes(req.path) || req.session.authenticated) {
     return next();
   }
-  // API requests get 401 instead of redirect
-  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+  if (req.path.startsWith('/api/') || req.path === '/health') {
     return res.status(401).json({ ok: false, error: 'Unauthorized' });
   }
   res.redirect('/login.html');
@@ -43,13 +60,30 @@ function requireAuth(req, res, next) {
 app.use(requireAuth);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Setup route — only works on first run
+app.post('/auth/setup', (req, res) => {
+  const config = getConfig();
+  if (!config.firstRun) {
+    return res.status(403).json({ ok: false, error: 'Setup already completed' });
+  }
+
+  const { username, password } = req.body;
+  if (!username || username.trim().length < 3) {
+    return res.status(400).json({ ok: false, error: 'El usuario debe tener al menos 3 caracteres' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ ok: false, error: 'La contrasena debe tener al menos 6 caracteres' });
+  }
+
+  saveConfig({ firstRun: false, auth: { username: username.trim(), password } });
+  return res.json({ ok: true });
+});
+
 // Auth routes
 app.post('/auth/login', (req, res) => {
+  const config = getConfig();
   const { username, password } = req.body;
-  if (
-    username === config.auth.username &&
-    password === config.auth.password
-  ) {
+  if (username === config.auth.username && password === config.auth.password) {
     req.session.authenticated = true;
     return res.json({ ok: true });
   }
