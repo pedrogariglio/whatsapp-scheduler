@@ -4,6 +4,36 @@ const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
 
+const CONTACTS_CACHE_PATH = path.join(__dirname, '..', 'data', 'contacts-cache.json');
+
+// Load contacts cache from disk on startup
+function loadContactsCacheFromDisk() {
+  try {
+    if (fs.existsSync(CONTACTS_CACHE_PATH)) {
+      const raw = fs.readFileSync(CONTACTS_CACHE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log(`📒 ${parsed.length} contactos cargados desde cache en disco.`);
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️  No se pudo leer el cache de contactos:', err.message);
+  }
+  return null;
+}
+
+// Save contacts cache to disk
+function saveContactsCacheToDisk(contacts) {
+  try {
+    const dataDir = path.join(__dirname, '..', 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(CONTACTS_CACHE_PATH, JSON.stringify(contacts, null, 2));
+  } catch (err) {
+    console.warn('⚠️  No se pudo guardar el cache de contactos:', err.message);
+  }
+}
+
 // LocalAuth guarda la sesión en .wwebjs_auth/
 const client = new Client({
   authStrategy: new LocalAuth({
@@ -20,6 +50,9 @@ const client = new Client({
       '--disable-dev-shm-usage',
       '--disable-accelerated-2d-canvas',
       '--disable-gpu',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--js-flags="--max-old-space-size=512"',
     ],
   },
 });
@@ -28,11 +61,12 @@ let isReady = false;
 let ownerNumber = null;
 let ownerLid = null;
 
-// Cache de contactos en memoria
-let contactsCache = null;
+// Cache de contactos en memoria — inicializar desde disco
+let contactsCache = loadContactsCacheFromDisk();
 
 function clearContactsCache() {
   contactsCache = null;
+  // No borramos el archivo en disco — se conserva para el próximo arranque
 }
 
 client.on('qr', (qr) => {
@@ -48,10 +82,15 @@ client.on('authenticated', () => {
 client.on('ready', () => {
   isReady = true;
   ownerNumber = client.info.wid.user;
-  ownerLid = client.info.wid._serialized.replace('@c.us', '@lid'); // puede no coincidir
+  ownerLid = client.info.wid._serialized.replace('@c.us', '@lid');
   console.log('🟢 WhatsApp Web listo para enviar mensajes.');
   setOwnerNumber(ownerNumber);
-  getContacts().then(c => console.log(`📒 ${c.length} contactos cargados en cache.`));
+  // Refrescar contactos desde WhatsApp y mergear con cache en disco
+  setTimeout(() => {
+    refreshContacts()
+      .then(c => console.log(`📒 Cache actualizado: ${c.length} contactos.`))
+      .catch(err => console.warn('⚠️  No se pudo actualizar contactos:', err.message));
+  }, 5000);
 });
 
 client.on('disconnected', (reason) => {
@@ -59,14 +98,13 @@ client.on('disconnected', (reason) => {
   clearContactsCache();
   console.warn('🔴 Cliente desconectado:', reason);
 
-  // Si el usuario cerró sesión desde el móvil, borrar la sesión guardada
   if (reason === 'LOGOUT') {
     const authPath = path.join(__dirname, '..', '.wwebjs_auth');
     if (fs.existsSync(authPath)) {
       fs.rmSync(authPath, { recursive: true, force: true });
       console.log('🗑️  Sesion eliminada. Reinicia para escanear el QR de nuevo.');
     }
-    return; // No reconectar automaticamente tras logout
+    return;
   }
 
   // Reconexión automática solo si fue desconexión inesperada
@@ -99,7 +137,7 @@ function isClientReady() {
   return isReady;
 }
 
-// Flag para evitar loop: mientras el bot está respondiendo, ignorar nuevos mensajes
+// Flag para evitar loop
 let botIsReplying = false;
 
 client.on('message_create', async (message) => {
@@ -111,9 +149,6 @@ client.on('message_create', async (message) => {
   const remote = message.id.remote;
   const from = message.from;
 
-  // Es el chat con uno mismo si:
-  // - remote es mi propio @c.us, O
-  // - remote es cualquier @lid Y from es mi propio @c.us
   const isOwnChat = remote === ownCus || (remote.endsWith('@lid') && from === ownCus);
   if (!isOwnChat) return;
 
@@ -129,19 +164,23 @@ function getClient() {
   return client;
 }
 
-async function getContacts() {
-  if (!isReady) return [];
-
-  // Devolver cache si ya existe
-  if (contactsCache) return contactsCache;
-
+// Carga contactos frescos desde WhatsApp y hace merge con cache en disco
+async function refreshContacts() {
   const [contacts, chats] = await Promise.all([
     client.getContacts(),
     client.getChats(),
   ]);
 
+  // Partir del cache en disco como base para no perder contactos previos
+  const diskCache = loadContactsCacheFromDisk() || [];
   const seen = new Map();
 
+  // Cargar primero los del disco
+  for (const c of diskCache) {
+    seen.set(c.name, c);
+  }
+
+  // Mergear con los frescos de WhatsApp (sobreescribe si hay mejor dato)
   for (const c of contacts) {
     if (!c.name || c.isGroup || c.isMe || !c.number) continue;
     if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
@@ -156,8 +195,24 @@ async function getContacts() {
     }
   }
 
-  contactsCache = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  return contactsCache;
+  const merged = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  contactsCache = merged;
+  saveContactsCacheToDisk(merged);
+  return merged;
+}
+
+async function getContacts() {
+  // Si hay cache en memoria, devolverlo inmediatamente
+  if (contactsCache) return contactsCache;
+
+  // Si WhatsApp está listo, cargar frescos
+  if (isReady) return refreshContacts();
+
+  // Si no está listo, intentar desde disco
+  const disk = loadContactsCacheFromDisk();
+  if (disk) return disk;
+
+  return [];
 }
 
 module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber };
