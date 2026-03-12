@@ -3,8 +3,25 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 const CONTACTS_CACHE_PATH = path.join(__dirname, '..', 'data', 'contacts-cache.json');
+const AUTH_PATH = path.join(__dirname, '..', '.wwebjs_auth');
+
+// Borrado robusto cross-platform
+function forceRemoveDir(dirPath) {
+  if (!fs.existsSync(dirPath)) return;
+  try {
+    if (process.platform === 'win32') {
+      execSync(`rmdir /s /q "${dirPath}"`, { stdio: 'ignore' });
+    } else {
+      execSync(`rm -rf "${dirPath}"`, { stdio: 'ignore' });
+    }
+    console.log(`🗑️  Carpeta eliminada: ${dirPath}`);
+  } catch (err) {
+    console.warn(`⚠️  No se pudo eliminar ${dirPath}:`, err.message);
+  }
+}
 
 // Load contacts cache from disk on startup
 function loadContactsCacheFromDisk() {
@@ -37,7 +54,7 @@ function saveContactsCacheToDisk(contacts) {
 // LocalAuth guarda la sesión en .wwebjs_auth/
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: path.join(__dirname, '..', '.wwebjs_auth'),
+    dataPath: AUTH_PATH,
   }),
   puppeteer: {
     headless: true,
@@ -99,18 +116,15 @@ client.on('disconnected', (reason) => {
   console.warn('🔴 Cliente desconectado:', reason);
 
   if (reason === 'LOGOUT') {
-    const authPath = path.join(__dirname, '..', '.wwebjs_auth');
-    if (fs.existsSync(authPath)) {
-      fs.rmSync(authPath, { recursive: true, force: true });
-      console.log('🗑️  Sesion eliminada. Reinicia para escanear el QR de nuevo.');
-    }
+    forceRemoveDir(AUTH_PATH);
+    console.log('🗑️  Sesion eliminada. Reinicia para escanear el QR de nuevo.');
     return;
   }
 
   // Reconexión automática solo si fue desconexión inesperada
   setTimeout(() => {
     console.log('🔄 Intentando reconectar...');
-    client.initialize();
+    client.initialize().catch(e => console.error('❌ Error reconectando:', e.message));
   }, 10000);
 });
 
@@ -171,16 +185,13 @@ async function refreshContacts() {
     client.getChats(),
   ]);
 
-  // Partir del cache en disco como base para no perder contactos previos
   const diskCache = loadContactsCacheFromDisk() || [];
   const seen = new Map();
 
-  // Cargar primero los del disco
   for (const c of diskCache) {
     seen.set(c.name, c);
   }
 
-  // Mergear con los frescos de WhatsApp (sobreescribe si hay mejor dato)
   for (const c of contacts) {
     if (!c.name || c.isGroup || c.isMe || !c.number) continue;
     if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
@@ -202,17 +213,28 @@ async function refreshContacts() {
 }
 
 async function getContacts() {
-  // Si hay cache en memoria, devolverlo inmediatamente
   if (contactsCache) return contactsCache;
-
-  // Si WhatsApp está listo, cargar frescos
   if (isReady) return refreshContacts();
-
-  // Si no está listo, intentar desde disco
   const disk = loadContactsCacheFromDisk();
   if (disk) return disk;
-
   return [];
 }
 
-module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber };
+async function initializeClient() {
+  try {
+    await client.initialize();
+  } catch (err) {
+    if (err.message && err.message.includes('Execution context was destroyed')) {
+      console.warn('⚠️  Chromium crasheó durante la inicialización. Limpiando sesión y reintentando...');
+      forceRemoveDir(AUTH_PATH);
+      setTimeout(() => {
+        console.log('🔄 Reintentando inicialización...');
+        client.initialize().catch(e => console.error('❌ Error en reintento:', e.message));
+      }, 5000);
+    } else {
+      console.error('❌ Error iniciando cliente WhatsApp:', err.message);
+    }
+  }
+}
+
+module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber, initializeClient };

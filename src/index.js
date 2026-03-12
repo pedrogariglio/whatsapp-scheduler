@@ -132,7 +132,8 @@ initDB().then(() => {
     console.log(`   Health check: http://localhost:${PORT}/health\n`);
   });
   console.log('🌐 Inicializando cliente WhatsApp Web...');
-  client.initialize();
+  const { initializeClient } = require('./whatsapp');
+  initializeClient();
   startScheduler();
 }).catch(err => {
   console.error('❌ Error iniciando la base de datos:', err);
