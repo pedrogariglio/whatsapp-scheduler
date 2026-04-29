@@ -1,0 +1,24 @@
+[Unit]
+Description=WhatsApp Scheduler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pedrogariglio
+Group=pedrogariglio
+WorkingDirectory=/home/pedrogariglio/whatsapp-scheduler
+EnvironmentFile=/home/pedrogariglio/whatsapp-scheduler/.env
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths=/home/pedrogariglio/whatsapp-scheduler /opt/whatsapp-scheduler/state
+
+[Install]
+WantedBy=multi-user.target

@@ -151,18 +151,96 @@ whatsapp-scheduler/
 
 ## Configuración
 
-El archivo `.env` en la raíz del proyecto permite ajustar el puerto:
+El archivo `.env` en la raíz del proyecto permite ajustar el entorno:
 
 ```env
 PORT=3001
+HOST=127.0.0.1
+SESSION_SECRET=cadena-larga-y-random
+STATE_DIR=./state
+CHROME_BIN=
+TRUST_PROXY=false
+COOKIE_SECURE=false
+ALLOW_LOCAL_WEB_SETUP=false
+```
+
+Variables relevantes:
+
+- `HOST`: usar `0.0.0.0` si vas a entrar desde otra máquina por WireGuard o LAN
+- `SESSION_SECRET`: obligatorio, mínimo 32 caracteres
+- `STATE_DIR`: directorio persistente para `config.json`, DB, sesión de WhatsApp y uploads
+- `CHROME_BIN`: ruta explícita al navegador Chromium/Chrome si hace falta
+- `ALLOW_LOCAL_WEB_SETUP`: dejar `false` en entornos estables; usar `npm run setup-admin`
+
+### Bootstrap de admin
+
+La configuración inicial del panel se crea desde CLI:
+
+```bash
+npm run setup-admin
+```
+
+Esto guarda el usuario y un hash de contraseña dentro de `config.json` en `STATE_DIR`.
+
+### Ubuntu Server + WireGuard
+
+Despliegue recomendado para tu escenario:
+
+1. Clonar el repo en el servidor
+2. Crear `.env`
+3. Crear un `STATE_DIR` persistente fuera del repo
+4. Ejecutar `npm run setup-admin`
+5. Vincular WhatsApp una vez con QR
+6. Exponer el puerto solo por `wg0` con firewall
+7. Ejecutar la app con `systemd`
+
+Ejemplo de `.env`:
+
+```env
+PORT=3001
+HOST=0.0.0.0
+SESSION_SECRET=una-cadena-larga-y-random
+STATE_DIR=/opt/whatsapp-scheduler/state
+CHROME_BIN=/usr/bin/chromium-browser
+TRUST_PROXY=false
+COOKIE_SECURE=false
+ALLOW_LOCAL_WEB_SETUP=false
+```
+
+Ejemplo de preparación:
+
+```bash
+sudo mkdir -p /opt/whatsapp-scheduler/state
+sudo chown -R $USER:$USER /opt/whatsapp-scheduler/state
+npm install
+npm run setup-admin
+npm start
+```
+
+Con la app validada, podés habilitar el servicio de `systemd` incluido en [deploy/systemd/whatsapp-scheduler.service](/home/pedrogariglio/backup-home/pedrogariglio/whatsapp-scheduler/deploy/systemd/whatsapp-scheduler.service:1).
+
+Pasos típicos:
+
+```bash
+sudo cp deploy/systemd/whatsapp-scheduler.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler
+sudo systemctl status whatsapp-scheduler
+```
+
+Logs del servicio:
+
+```bash
+journalctl -u whatsapp-scheduler -f
 ```
 
 ---
 
 ## Notas de seguridad
 
-- **No subas `.wwebjs_auth/` ni `.env` a ningún repositorio** — contienen tu sesión activa de WhatsApp y configuración local. Ambos están excluidos en `.gitignore`.
-- La API no tiene autenticación porque está pensada para uso personal en red local. No expongas el puerto 3001 fuera de tu red.
+- **No subas `.wwebjs_auth/`, `.env`, ni el contenido de `STATE_DIR` a ningún repositorio** — contienen sesión, configuración y datos sensibles.
+- La app ahora exige login para el panel y rate limiting en autenticación, pero igual no conviene exponer el puerto 3001 a internet pública.
+- Si usás WireGuard, permití el puerto solo sobre `wg0`.
 - WhatsApp puede limitar cuentas que envían mensajes automatizados en alto volumen. Este sistema está pensado para uso ocasional y personal.
 
 ---
