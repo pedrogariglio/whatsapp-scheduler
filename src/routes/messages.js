@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../db');
 const { stateDir } = require('../config');
@@ -17,32 +18,60 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `${timestamp}${ext}`);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
   },
 });
 
-const allowedMimes = [
-  'image/jpeg', 'image/png', 'image/gif',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/msword',
-  'application/vnd.ms-excel',
-];
+const allowedMimeExtensions = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'application/pdf': ['.pdf'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/msword': ['.doc'],
+  'application/vnd.ms-excel': ['.xls'],
+};
 
 const upload = multer({
   storage,
   limits: { fileSize: 16 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (allowedMimes.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = allowedMimeExtensions[file.mimetype];
+
+    if (allowedExtensions && allowedExtensions.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error('Tipo de archivo no permitido'));
     }
   },
 });
+
+function safeUnlink(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return;
+
+  try {
+    fs.unlinkSync(filePath);
+  } catch (error) {
+    console.warn(`⚠️  No se pudo borrar archivo ${filePath}:`, error.message);
+  }
+}
+
+function uploadAttachment(req, res, next) {
+  upload.single('attachment')(req, res, (error) => {
+    if (!error) return next();
+
+    if (req.file) safeUnlink(req.file.path);
+
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ ok: false, error: 'El archivo supera el límite de 16MB' });
+    }
+
+    return res.status(400).json({ ok: false, error: error.message || 'No se pudo procesar el archivo adjunto' });
+  });
+}
 
 // Sanitize phone: strip +, spaces, dashes
 function sanitizePhone(phone) {
@@ -84,10 +113,10 @@ function validateMessageBody(body) {
 }
 
 // POST /api/messages
-router.post('/', upload.single('attachment'), (req, res) => {
+router.post('/', uploadAttachment, (req, res) => {
   const { errors, sanitizedPhone } = validateMessageBody(req.body);
   if (errors.length > 0) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    if (req.file) safeUnlink(req.file.path);
     return res.status(400).json({ ok: false, errors });
   }
 
@@ -99,7 +128,7 @@ router.post('/', upload.single('attachment'), (req, res) => {
     const newMsg = db.createMessage(sanitizedPhone, message.trim(), isoDate, attachmentPath);
     return res.status(201).json({ ok: true, message: newMsg });
   } catch (error) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    if (req.file) safeUnlink(req.file.path);
     console.error('Error creating message:', error);
     return res.status(500).json({ ok: false, error: 'Internal server error' });
   }
@@ -131,7 +160,7 @@ router.delete('/:id', (req, res) => {
     return res.status(409).json({ ok: false, error: 'No se puede eliminar un mensaje ya enviado' });
   }
   if (existing.attachment_path && fs.existsSync(existing.attachment_path)) {
-    fs.unlinkSync(existing.attachment_path);
+    safeUnlink(existing.attachment_path);
   }
   db.deleteMessage(id);
   return res.json({ ok: true, message: `Mensaje #${id} eliminado` });

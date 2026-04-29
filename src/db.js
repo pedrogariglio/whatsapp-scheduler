@@ -43,6 +43,11 @@ async function initDB() {
   } catch {
     // columna ya existe
   }
+  try {
+    db.run("ALTER TABLE messages ADD COLUMN next_retry_at TEXT DEFAULT NULL");
+  } catch {
+    // columna ya existe
+  }
 
   saveToDisk();
   console.log('Base de datos lista.');
@@ -73,6 +78,8 @@ function createMessage(phone, message, scheduledAt, attachmentPath = null) {
     created_at: new Date().toISOString(),
     sent_at: null,
     attachment_path: attachmentPath,
+    retry_count: 0,
+    next_retry_at: null,
   };
 }
 
@@ -81,11 +88,14 @@ function getAllMessages() {
   return parseRows(result);
 }
 
-function getPendingMessages() {
+function getDispatchableMessages() {
   const now = new Date().toISOString();
   const result = db.exec(
-    "SELECT * FROM messages WHERE status = 'pending' AND scheduled_at <= ?",
-    [now]
+    `SELECT * FROM messages
+     WHERE (status = 'pending' AND scheduled_at <= ?)
+        OR (status = 'retrying' AND (next_retry_at IS NULL OR next_retry_at <= ?))
+     ORDER BY scheduled_at ASC, id ASC`,
+    [now, now]
   );
   return parseRows(result);
 }
@@ -104,12 +114,15 @@ function getMessageById(id) {
 }
 
 function markAsSent(id) {
-  db.run("UPDATE messages SET status = 'sent', sent_at = datetime('now') WHERE id = ?", [id]);
+  db.run(
+    "UPDATE messages SET status = 'sent', sent_at = datetime('now'), next_retry_at = NULL WHERE id = ?",
+    [id]
+  );
   saveToDisk();
 }
 
 function markAsFailed(id) {
-  db.run("UPDATE messages SET status = 'failed' WHERE id = ?", [id]);
+  db.run("UPDATE messages SET status = 'failed', next_retry_at = NULL WHERE id = ?", [id]);
   saveToDisk();
 }
 
@@ -129,8 +142,11 @@ function parseRows(result) {
   });
 }
 
-function incrementRetry(id) {
-  db.run("UPDATE messages SET retry_count = retry_count + 1 WHERE id = ?", [id]);
+function scheduleRetry(id, nextRetryAt) {
+  db.run(
+    "UPDATE messages SET retry_count = retry_count + 1, status = 'retrying', next_retry_at = ? WHERE id = ?",
+    [nextRetryAt, id]
+  );
   saveToDisk();
 }
 
@@ -140,8 +156,8 @@ function getRetryCount(id) {
   return result[0].values[0][0] || 0;
 }
 
-function markAsRetrying(id) {
-  db.run("UPDATE messages SET status = 'retrying' WHERE id = ?", [id]);
+function markAsPending(id) {
+  db.run("UPDATE messages SET status = 'pending', next_retry_at = NULL WHERE id = ?", [id]);
   saveToDisk();
 }
 
@@ -149,13 +165,13 @@ module.exports = {
   initDB,
   createMessage,
   getAllMessages,
-  getPendingMessages,
+  getDispatchableMessages,
   getPendingMessagesList,
   getMessageById,
   markAsSent,
   markAsFailed,
   deleteMessage,
-  incrementRetry,
+  scheduleRetry,
   getRetryCount,
-  markAsRetrying,
+  markAsPending,
 };

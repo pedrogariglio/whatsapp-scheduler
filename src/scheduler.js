@@ -6,6 +6,7 @@ const { sendMessage, isClientReady, getClient } = require('./whatsapp');
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 30 * 1000; // 30 seconds
+let schedulerRunning = false;
 
 const sseClients = new Set();
 
@@ -29,7 +30,10 @@ function emitEvent(type, data) {
 }
 
 async function sendWhatsappMessage(msg) {
-  if (msg.attachment_path && fs.existsSync(msg.attachment_path)) {
+  if (msg.attachment_path) {
+    if (!fs.existsSync(msg.attachment_path)) {
+      throw new Error('Attachment file not found');
+    }
     const media = MessageMedia.fromFilePath(msg.attachment_path);
     const client = getClient();
     const chatId = `${msg.phone}@c.us`;
@@ -39,12 +43,23 @@ async function sendWhatsappMessage(msg) {
   }
 }
 
+function cleanupAttachment(msg) {
+  if (!msg.attachment_path || !fs.existsSync(msg.attachment_path)) return;
+
+  try {
+    fs.unlinkSync(msg.attachment_path);
+  } catch (error) {
+    console.warn(`⚠️  Could not remove attachment for message #${msg.id}:`, error.message);
+  }
+}
+
 async function attemptSend(msg) {
   const retryCount = db.getRetryCount(msg.id);
 
   try {
     await sendWhatsappMessage(msg);
     db.markAsSent(msg.id);
+    cleanupAttachment(msg);
     console.log(`✅ Message #${msg.id} sent to ${msg.phone}`);
     emitEvent('sent', { id: msg.id, phone: msg.phone, message: msg.message });
 
@@ -52,42 +67,52 @@ async function attemptSend(msg) {
     console.error(`❌ Message #${msg.id} failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error.message);
 
     if (retryCount < MAX_RETRIES) {
-      db.incrementRetry(msg.id);
-      db.markAsRetrying(msg.id); // cron ignores 'retrying' messages
-      console.log(`🔄 Message #${msg.id} will retry in 30 seconds...`);
-
-      setTimeout(async () => {
-        const freshMsg = db.getMessageById(msg.id);
-        // Only retry if still in retrying state (not manually deleted)
-        if (freshMsg && freshMsg.status === 'retrying') {
-          await attemptSend(freshMsg);
-        }
-      }, RETRY_DELAY_MS);
+      const nextRetryAt = new Date(Date.now() + RETRY_DELAY_MS).toISOString();
+      db.scheduleRetry(msg.id, nextRetryAt);
+      console.log(`🔄 Message #${msg.id} scheduled to retry at ${nextRetryAt}.`);
 
     } else {
       db.markAsFailed(msg.id);
+      cleanupAttachment(msg);
       console.error(`💀 Message #${msg.id} permanently failed after ${MAX_RETRIES + 1} attempts.`);
       emitEvent('failed', { id: msg.id, phone: msg.phone, error: error.message });
     }
   }
 }
 
-function startScheduler() {
-  cron.schedule('* * * * *', async () => {
-    if (!isClientReady()) return;
+async function processDueMessages() {
+  if (schedulerRunning || !isClientReady()) return;
 
-    const pending = db.getPendingMessages();
+  schedulerRunning = true;
+  try {
+    const pending = db.getDispatchableMessages();
     if (pending.length === 0) return;
 
     console.log(`⏰ Scheduler: ${pending.length} message(s) to send.`);
 
     for (const msg of pending) {
-      await attemptSend(msg);
+      const freshMsg = db.getMessageById(msg.id);
+      if (!freshMsg || !['pending', 'retrying'].includes(freshMsg.status)) continue;
+
+      if (freshMsg.status === 'retrying') {
+        db.markAsPending(freshMsg.id);
+      }
+
+      await attemptSend({ ...freshMsg, status: 'pending', next_retry_at: null });
       await sleep(2000);
     }
-  });
+  } finally {
+    schedulerRunning = false;
+  }
+}
 
-  console.log('⏱️  Scheduler started (checking every minute).');
+function startScheduler() {
+  cron.schedule('*/15 * * * * *', processDueMessages);
+  setTimeout(() => {
+    processDueMessages().catch(err => console.error('❌ Scheduler bootstrap failed:', err.message));
+  }, 3000);
+
+  console.log('⏱️  Scheduler started (checking every 15 seconds).');
 }
 
 function sleep(ms) {
