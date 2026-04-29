@@ -1,6 +1,7 @@
 {
+  "firstRun": false,
   "auth": {
     "username": "admin",
-    "password": "admin123"
+    "passwordHash": "scrypt$replace-with-generated-hash$replace-with-generated-hash"
   }
 }

@@ -117,7 +117,7 @@
   <div class="field">
     <label>Contraseña</label>
     <input type="password" id="password" autocomplete="new-password"/>
-    <div class="hint">Minimo 6 caracteres</div>
+    <div class="hint">Minimo 10 caracteres</div>
   </div>
 
   <div class="field">
@@ -151,8 +151,8 @@
       errorMsg.textContent = 'El usuario debe tener al menos 3 caracteres';
       return;
     }
-    if (password.length < 6) {
-      errorMsg.textContent = 'La contrasena debe tener al menos 6 caracteres';
+    if (password.length < 10) {
+      errorMsg.textContent = 'La contrasena debe tener al menos 10 caracteres';
       return;
     }
     if (password !== passwordConfirm) {

@@ -25,3 +25,4 @@ Thumbs.db
 uploads/
 config.json
 data/contacts-cache.json
+state/

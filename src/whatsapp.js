@@ -4,9 +4,11 @@ const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const { stateDir } = require('./config');
 
-const CONTACTS_CACHE_PATH = path.join(__dirname, '..', 'data', 'contacts-cache.json');
-const AUTH_PATH = path.join(__dirname, '..', '.wwebjs_auth');
+const CONTACTS_CACHE_PATH = path.join(stateDir, 'data', 'contacts-cache.json');
+const AUTH_PATH = path.join(stateDir, '.wwebjs_auth');
+const CHROME_BIN = process.env.CHROME_BIN;
 
 // Borrado robusto cross-platform
 function forceRemoveDir(dirPath) {
@@ -43,7 +45,7 @@ function loadContactsCacheFromDisk() {
 // Save contacts cache to disk
 function saveContactsCacheToDisk(contacts) {
   try {
-    const dataDir = path.join(__dirname, '..', 'data');
+    const dataDir = path.join(stateDir, 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(CONTACTS_CACHE_PATH, JSON.stringify(contacts, null, 2));
   } catch (err) {
@@ -58,9 +60,7 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    ...(process.platform === 'linux' && {
-      executablePath: '/usr/bin/chromium-browser',
-    }),
+    ...(CHROME_BIN ? { executablePath: CHROME_BIN } : {}),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

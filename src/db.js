@@ -1,11 +1,12 @@
 const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
+const { stateDir } = require('./config');
 
-const dataDir = path.join(__dirname, '..', 'data');
+const dataDir = path.join(stateDir, 'data');
 const dbPath = path.join(dataDir, 'scheduler.db');
 
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 let db;
 

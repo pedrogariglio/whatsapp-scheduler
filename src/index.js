@@ -2,49 +2,82 @@ require('dotenv').config();
 const { client, getContacts } = require('./whatsapp');
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
-const fs = require('fs');
 const { startScheduler } = require('./scheduler');
 const messagesRouter = require('./routes/messages');
+const { hashPassword, verifyPassword } = require('./auth');
+const { ensureConfig, getConfig, saveConfig, hasConfiguredAdmin } = require('./config');
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const app = express();
 
-// Load config
-const configPath = path.join(__dirname, '..', 'config.json');
-if (!fs.existsSync(configPath)) {
-  fs.writeFileSync(configPath, JSON.stringify({ firstRun: true, auth: { username: '', password: '' } }, null, 2));
+if (!SESSION_SECRET || SESSION_SECRET.length < 32) {
+  console.error('SESSION_SECRET debe existir y tener al menos 32 caracteres.');
+  process.exit(1);
 }
 
-function getConfig() {
-  return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-}
+ensureConfig();
 
-function saveConfig(config) {
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
 }
 
 // Middleware
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
+app.use(express.json({ limit: '1mb' }));
 app.use(session({
-  secret: 'wa-scheduler-secret-key',
+  name: 'wa.sid',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true },
+  cookie: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.COOKIE_SECURE === 'true',
+  },
 }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: 'Demasiados intentos. Intenta de nuevo mas tarde.' },
+});
+
+function isLocalRequest(req) {
+  const remoteAddress = req.ip || req.socket.remoteAddress || '';
+  return remoteAddress === '127.0.0.1' || remoteAddress === '::1' || remoteAddress === '::ffff:127.0.0.1';
+}
 
 // Auth middleware
 function requireAuth(req, res, next) {
   const config = getConfig();
 
-  // First run — only allow setup routes
-  if (config.firstRun) {
+  if (!hasConfiguredAdmin(config)) {
+    const allowLocalWebSetup = process.env.ALLOW_LOCAL_WEB_SETUP === 'true';
     const allowedPaths = ['/setup.html', '/auth/setup'];
-    if (allowedPaths.includes(req.path)) return next();
-    if (req.path === '/' || !req.path.startsWith('/api/')) {
-      return res.redirect('/setup.html');
+
+    if (allowLocalWebSetup && isLocalRequest(req) && allowedPaths.includes(req.path)) {
+      return next();
     }
-    return res.status(403).json({ ok: false, error: 'Setup required' });
+
+    if (req.path === '/health') {
+      return res.status(503).json({ ok: false, error: 'Admin setup required' });
+    }
+
+    if (req.path.startsWith('/api/')) {
+      return res.status(503).json({ ok: false, error: 'Admin setup required. Run npm run setup-admin on the server.' });
+    }
+
+    return res.status(503).send('Admin setup required. Run "npm run setup-admin" on the server.');
   }
 
   const publicPaths = ['/auth/login', '/login.html'];
@@ -60,10 +93,14 @@ function requireAuth(req, res, next) {
 app.use(requireAuth);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Setup route — only works on first run
-app.post('/auth/setup', (req, res) => {
+// Setup route — disabled by default and only allowed from loopback
+app.post('/auth/setup', authLimiter, (req, res) => {
+  if (process.env.ALLOW_LOCAL_WEB_SETUP !== 'true' || !isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, error: 'Web setup disabled' });
+  }
+
   const config = getConfig();
-  if (!config.firstRun) {
+  if (hasConfiguredAdmin(config)) {
     return res.status(403).json({ ok: false, error: 'Setup already completed' });
   }
 
@@ -71,28 +108,43 @@ app.post('/auth/setup', (req, res) => {
   if (!username || username.trim().length < 3) {
     return res.status(400).json({ ok: false, error: 'El usuario debe tener al menos 3 caracteres' });
   }
-  if (!password || password.length < 6) {
-    return res.status(400).json({ ok: false, error: 'La contrasena debe tener al menos 6 caracteres' });
+  if (!password || password.length < 10) {
+    return res.status(400).json({ ok: false, error: 'La contrasena debe tener al menos 10 caracteres' });
   }
 
-  saveConfig({ firstRun: false, auth: { username: username.trim(), password } });
+  saveConfig({
+    firstRun: false,
+    auth: {
+      username: username.trim(),
+      passwordHash: hashPassword(password),
+    },
+  });
   return res.json({ ok: true });
 });
 
 // Auth routes
-app.post('/auth/login', (req, res) => {
+app.post('/auth/login', authLimiter, (req, res, next) => {
   const config = getConfig();
   const { username, password } = req.body;
-  if (username === config.auth.username && password === config.auth.password) {
-    req.session.authenticated = true;
-    return res.json({ ok: true });
+  const isValidUser = username === config.auth.username;
+  const isValidPassword = verifyPassword(password, config.auth.passwordHash);
+
+  if (isValidUser && isValidPassword) {
+    return req.session.regenerate((error) => {
+      if (error) return next(error);
+      req.session.authenticated = true;
+      return res.json({ ok: true });
+    });
   }
+
   return res.status(401).json({ ok: false, error: 'Invalid credentials' });
 });
 
 app.post('/auth/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ ok: true });
+  req.session.destroy(() => {
+    res.clearCookie('wa.sid');
+    res.json({ ok: true });
+  });
 });
 
 // Health check
@@ -127,9 +179,9 @@ app.use((req, res) => {
 // Init
 const { initDB } = require('./db');
 initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`   Health check: http://localhost:${PORT}/health\n`);
+  app.listen(PORT, HOST, () => {
+    console.log(`\n🚀 Servidor corriendo en http://${HOST}:${PORT}`);
+    console.log(`   Health check: http://${HOST}:${PORT}/health\n`);
   });
   console.log('🌐 Inicializando cliente WhatsApp Web...');
   const { initializeClient } = require('./whatsapp');
