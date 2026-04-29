@@ -228,6 +228,12 @@ sudo systemctl enable --now whatsapp-scheduler
 sudo systemctl status whatsapp-scheduler
 ```
 
+Notas del servicio:
+
+- El unit file de ejemplo asume Node.js instalado con `nvm` en `/home/pedrogariglio/.nvm/...`
+- Si tu `node` o `npm` viven en otra ruta, ajustá `Environment=PATH=...` y `ExecStart=...`
+- Si `CHROME_BIN` apunta a un Chromium empaquetado como Snap, no uses `NoNewPrivileges=true` en el servicio porque bloquea `snap-confine`
+
 Logs del servicio:
 
 ```bash
