@@ -230,10 +230,15 @@ client.on('message_create', async (message) => {
   if (botIsReplying) return;
 
   const ownCus = client.info.wid._serialized;
+  const ownLid = ownerLid || ownCus.replace('@c.us', '@lid');
   const remote = message.id.remote;
   const from = message.from;
 
-  const isOwnChat = remote === ownCus || (remote.endsWith('@lid') && from === ownCus);
+  const isOwnChat =
+    remote === ownCus ||
+    remote === ownLid ||
+    (from === ownCus && (message.to === ownCus || message.to === ownLid));
+
   if (!isOwnChat) return;
 
   botIsReplying = true;

@@ -100,7 +100,14 @@ async function handleMessage(message, client) {
     return;
   }
 
-  await handleAyuda(message, client);
+  if (session.step !== 'idle') {
+    await reply(message, client, '❌ No entendí la respuesta. Escribí /ayuda para ver los comandos disponibles.');
+    return;
+  }
+
+  if (text.startsWith('/')) {
+    await handleAyuda(message, client);
+  }
 }
 
 async function handlePendientes(message, client) {
