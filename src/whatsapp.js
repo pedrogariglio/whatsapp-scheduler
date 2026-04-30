@@ -9,6 +9,9 @@ const { stateDir } = require('./config');
 const CONTACTS_CACHE_PATH = path.join(stateDir, 'data', 'contacts-cache.json');
 const AUTH_PATH = path.join(stateDir, '.wwebjs_auth');
 const CHROME_BIN = process.env.CHROME_BIN;
+const READY_TIMEOUT_MS = 90 * 1000;
+const REINIT_DELAY_MS = 10 * 1000;
+const MAX_STALL_RETRIES = 3;
 
 // Borrado robusto cross-platform
 function forceRemoveDir(dirPath) {
@@ -77,6 +80,10 @@ const client = new Client({
 let isReady = false;
 let ownerNumber = null;
 let ownerLid = null;
+let isInitializing = false;
+let readyTimeout = null;
+let reinitTimeout = null;
+let stallRetryCount = 0;
 
 // Cache de contactos en memoria — inicializar desde disco
 let contactsCache = loadContactsCacheFromDisk();
@@ -84,6 +91,59 @@ let contactsCache = loadContactsCacheFromDisk();
 function clearContactsCache() {
   contactsCache = null;
   // No borramos el archivo en disco — se conserva para el próximo arranque
+}
+
+function clearReadyTimeout() {
+  if (readyTimeout) {
+    clearTimeout(readyTimeout);
+    readyTimeout = null;
+  }
+}
+
+function clearReinitTimeout() {
+  if (reinitTimeout) {
+    clearTimeout(reinitTimeout);
+    reinitTimeout = null;
+  }
+}
+
+function scheduleReadyWatchdog(context) {
+  clearReadyTimeout();
+  readyTimeout = setTimeout(() => {
+    if (isReady) return;
+
+    stallRetryCount += 1;
+    console.warn(
+      `⚠️  WhatsApp quedó autenticado pero no listo tras ${READY_TIMEOUT_MS / 1000}s (${context}). Reintento ${stallRetryCount}/${MAX_STALL_RETRIES}.`
+    );
+
+    if (stallRetryCount > MAX_STALL_RETRIES) {
+      console.error('❌ El cliente no logra llegar a ready luego de varios reintentos. Reiniciá el servicio y, si persiste, relinkeá la sesión.');
+      return;
+    }
+
+    scheduleReinitialize('ready-timeout');
+  }, READY_TIMEOUT_MS);
+}
+
+function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
+  if (reinitTimeout) return;
+
+  clearReadyTimeout();
+  reinitTimeout = setTimeout(async () => {
+    reinitTimeout = null;
+    console.log(`🔄 Reinicializando cliente WhatsApp (${reason})...`);
+
+    try {
+      await client.destroy();
+    } catch (error) {
+      console.warn('⚠️  Error al destruir cliente antes de reinicializar:', error.message);
+    }
+
+    isReady = false;
+    isInitializing = false;
+    initializeClient();
+  }, delayMs);
 }
 
 client.on('qr', (qr) => {
@@ -94,10 +154,15 @@ client.on('qr', (qr) => {
 
 client.on('authenticated', () => {
   console.log('✅ Autenticado correctamente. Sesión guardada.');
+  scheduleReadyWatchdog('authenticated');
 });
 
 client.on('ready', () => {
   isReady = true;
+  isInitializing = false;
+  stallRetryCount = 0;
+  clearReadyTimeout();
+  clearReinitTimeout();
   ownerNumber = client.info.wid.user;
   ownerLid = client.info.wid._serialized.replace('@c.us', '@lid');
   console.log('🟢 WhatsApp Web listo para enviar mensajes.');
@@ -112,7 +177,9 @@ client.on('ready', () => {
 
 client.on('disconnected', (reason) => {
   isReady = false;
+  isInitializing = false;
   clearContactsCache();
+  clearReadyTimeout();
   console.warn('🔴 Cliente desconectado:', reason);
 
   if (reason === 'LOGOUT') {
@@ -121,16 +188,19 @@ client.on('disconnected', (reason) => {
     return;
   }
 
-  // Reconexión automática solo si fue desconexión inesperada
-  setTimeout(() => {
-    console.log('🔄 Intentando reconectar...');
-    client.initialize().catch(e => console.error('❌ Error reconectando:', e.message));
-  }, 10000);
+  scheduleReinitialize(`disconnected-${reason}`);
 });
 
 client.on('auth_failure', (msg) => {
+  isReady = false;
+  isInitializing = false;
+  clearReadyTimeout();
   console.error('❌ Error de autenticación:', msg);
   console.error('Borrá la carpeta .wwebjs_auth y reiniciá para escanear el QR de nuevo.');
+});
+
+client.on('change_state', (state) => {
+  console.log(`🔁 Estado de WhatsApp Web: ${state}`);
 });
 
 async function sendMessage(phone, message) {
@@ -221,18 +291,26 @@ async function getContacts() {
 }
 
 async function initializeClient() {
+  if (isInitializing) {
+    console.log('ℹ️  Inicialización de WhatsApp ya en curso; se omite intento duplicado.');
+    return;
+  }
+
+  isInitializing = true;
+  clearReadyTimeout();
+  clearReinitTimeout();
+
   try {
+    console.log('🔄 Intentando inicializar cliente WhatsApp...');
     await client.initialize();
   } catch (err) {
+    isInitializing = false;
     if (err.message && err.message.includes('Execution context was destroyed')) {
-      console.warn('⚠️  Chromium crasheó durante la inicialización. Limpiando sesión y reintentando...');
-      forceRemoveDir(AUTH_PATH);
-      setTimeout(() => {
-        console.log('🔄 Reintentando inicialización...');
-        client.initialize().catch(e => console.error('❌ Error en reintento:', e.message));
-      }, 5000);
+      console.warn('⚠️  Chromium crasheó durante la inicialización. Reintentando sin borrar la sesión...');
+      scheduleReinitialize('execution-context-destroyed', 5000);
     } else {
       console.error('❌ Error iniciando cliente WhatsApp:', err.message);
+      scheduleReinitialize('initialize-error');
     }
   }
 }
