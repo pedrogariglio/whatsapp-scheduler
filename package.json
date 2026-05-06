@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon --ignore data/ --ignore .wwebjs_auth/ src/index.js",
-    "setup-admin": "node scripts/setup-admin.js"
+    "setup-admin": "node scripts/setup-admin.js",
+    "backup:state": "node scripts/backup-state.js"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
