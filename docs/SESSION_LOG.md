@@ -178,3 +178,7 @@
   Resumen estructurado
 
   - Ver docs/sessions/session-2026-05-07.md para objetivos, cambios realizados, problemas, soluciones y próximos pasos de la sesión.
+
+  Documentacion operativa
+
+  - Completado docs/DEPLOYMENT.md como guia profesional de despliegue Ubuntu headless con systemd, WireGuard, STATE_DIR, backups, validacion y troubleshooting.
