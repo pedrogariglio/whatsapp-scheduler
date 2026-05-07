@@ -174,3 +174,7 @@
   - definir retención/rotación de backups
   - probar restore completo en entorno limpio
   - evaluar migración de sql.js a better-sqlite3
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-05-07.md para objetivos, cambios realizados, problemas, soluciones y próximos pasos de la sesión.
