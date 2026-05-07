@@ -104,8 +104,73 @@
   Pendiente actualizado
 
   - ejecutar reboot completo del servidor como validación final
-  - instalar y habilitar whatsapp-scheduler-backup.timer en el servidor
-  - validar ejecucion manual de whatsapp-scheduler-backup.service en el servidor
+  - definir retención/rotación de backups
+  - probar restore completo en entorno limpio
+  - evaluar migración de sql.js a better-sqlite3
+
+  Continuacion 2026-05-07
+
+  - Validado backup manual en servidor con checksum OK.
+  - Instalado y habilitado whatsapp-scheduler-backup.timer en el servidor.
+  - Confirmado timer enabled y active waiting.
+  - Confirmado disparo automatico del timer el 2026-05-07 03:15:06 UTC.
+  - Validada ejecucion manual de whatsapp-scheduler-backup.service con status=0/SUCCESS.
+  - Confirmada creacion de backups en /opt/whatsapp-scheduler/backups con permisos 0600.
+  - Validado checksum OK para backups 2026-05-06T20-35-04-120Z, 2026-05-07T03-15-06-180Z y 2026-05-07T11-51-42-615Z.
+
+  Pendiente actualizado
+
+  - ejecutar reboot completo del servidor como validación final
+  - validar systemd, WhatsApp ready, acceso por WireGuard y envio programado post-reboot
+  - definir retención/rotación de backups
+  - probar restore completo en entorno limpio
+  - evaluar migración de sql.js a better-sqlite3
+
+  Continuacion 2026-05-07 post-reboot
+
+  - Ejecutado reboot completo del servidor Ubuntu.
+  - Confirmado whatsapp-scheduler.service enabled y active running tras reboot.
+  - Confirmado arranque automatico por systemd desde boot 87957838899f44c0814e6233aabec98f.
+  - Confirmado scheduler iniciado y servidor escuchando en http://0.0.0.0:3001.
+  - Confirmada persistencia de sesion: WhatsApp autentico sin solicitar QR.
+  - Detectado fallo inicial de Chromium Snap al arrancar: xdg-settings no encontrado y cgroup snap no reconocido.
+  - Confirmada recuperacion automatica por watchdog: initialize-error, ready-timeout y reintento controlado.
+  - Confirmado estado final WhatsApp ready a las 2026-05-07 12:22:34 UTC.
+  - Confirmado bot activo y cache de contactos actualizada.
+
+  Pendiente actualizado
+
+  - validar acceso al panel desde workstation por WireGuard
+  - verificar timer de backup tras reboot
+  - evaluar hardening de Chromium no dependiente de Snap o resolver warning de xdg-settings/cgroup
+  - definir retención/rotación de backups
+  - probar restore completo en entorno limpio
+  - evaluar migración de sql.js a better-sqlite3
+
+  Continuacion 2026-05-07 validacion funcional
+
+  - Validado envio de mensaje de prueba post-reboot.
+  - Confirmado envio correcto y estado Sent.
+
+  Pendiente actualizado
+
+  - evaluar hardening de Chromium no dependiente de Snap o resolver warning de xdg-settings/cgroup
+  - definir retención/rotación de backups
+  - probar restore completo en entorno limpio
+  - evaluar migración de sql.js a better-sqlite3
+
+  Continuacion 2026-05-07 cierre post-reboot
+
+  - Validado acceso exitoso al panel desde workstation via WireGuard en http://10.0.0.1:3001/.
+  - Confirmado testigo verde en panel.
+  - Confirmado envio correcto de mensaje desde la workstation.
+  - Confirmado whatsapp-scheduler-backup.timer enabled y active waiting tras reboot.
+  - Confirmado proximo backup automatico para 2026-05-08 03:15:00 UTC.
+  - Confirmado ultimo backup automatico registrado el 2026-05-07 03:15:05 UTC.
+
+  Pendiente actualizado
+
+  - evaluar hardening de Chromium no dependiente de Snap o resolver warning de xdg-settings/cgroup
   - definir retención/rotación de backups
   - probar restore completo en entorno limpio
   - evaluar migración de sql.js a better-sqlite3

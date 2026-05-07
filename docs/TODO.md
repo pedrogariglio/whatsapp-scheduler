@@ -33,16 +33,16 @@
 - [x] Backup manual de `STATE_DIR` creado y verificado.
 
 ## Proximos pasos inmediatos
-- [ ] Ejecutar reboot completo del servidor Ubuntu y validar recuperacion end-to-end.
-- [ ] Confirmar que `systemd` levanta la app automaticamente despues del reboot.
-- [ ] Confirmar que WhatsApp llega a estado `ready` sin reenrolar QR despues del reboot.
-- [ ] Programar un mensaje de prueba post-reboot y verificar envio, estado `Sent` y limpieza de adjuntos.
-- [ ] Verificar acceso al panel desde workstation exclusivamente por WireGuard.
-- [ ] Revisar logs de `journalctl` despues del reboot para detectar warnings recurrentes de Chromium, WhatsApp o scheduler.
-- [ ] Documentar fecha, hora y resultado de la validacion post-reboot en `docs/SESSION_LOG.md`.
+- [x] Ejecutar reboot completo del servidor Ubuntu y validar recuperacion end-to-end.
+- [x] Confirmar que `systemd` levanta la app automaticamente despues del reboot.
+- [x] Confirmar que WhatsApp llega a estado `ready` sin reenrolar QR despues del reboot.
+- [x] Programar un mensaje de prueba post-reboot y verificar envio y estado `Sent`.
+- [x] Verificar acceso al panel desde workstation exclusivamente por WireGuard.
+- [x] Revisar logs de `journalctl` despues del reboot para detectar warnings recurrentes de Chromium, WhatsApp o scheduler.
+- [x] Documentar fecha, hora y resultado de la validacion post-reboot en `docs/SESSION_LOG.md`.
 
 ## Hardening / produccion
-- [ ] Habilitar y validar backups periodicos de `STATE_DIR` en el servidor.
+- [x] Habilitar y validar backups periodicos de `STATE_DIR` en el servidor.
 - [ ] Definir retencion de backups y politica de rotacion.
 - [ ] Probar restauracion de backup en un directorio limpio antes de considerarlo confiable.
 - [ ] Asegurar permisos restrictivos sobre `STATE_DIR`, `.env` y backups.
@@ -50,6 +50,7 @@
 - [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
 - [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
 - [ ] Evaluar si conviene fijar `CHROME_BIN` a una ruta estable no dependiente de Snap.
+- [ ] Revisar warning post-reboot de Chromium Snap: `xdg-settings: not found` y `not a snap cgroup`.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
 - [ ] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
@@ -63,8 +64,9 @@
 - [x] Guardar backups fuera del repo.
 - [x] Validar checksums o prueba equivalente de integridad.
 - [x] Agregar unit files para agendar backup con `systemd timer`.
-- [ ] Instalar y habilitar `whatsapp-scheduler-backup.timer` en el servidor.
-- [ ] Validar ejecucion manual de `whatsapp-scheduler-backup.service` en el servidor.
+- [x] Instalar y habilitar `whatsapp-scheduler-backup.timer` en el servidor.
+- [x] Validar ejecucion manual de `whatsapp-scheduler-backup.service` en el servidor.
+- [x] Verificar `whatsapp-scheduler-backup.timer` activo despues del reboot.
 - [x] Documentar comando de restore y orden de parada/arranque del servicio.
 
 ## Monitoreo
