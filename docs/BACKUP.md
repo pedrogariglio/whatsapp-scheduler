@@ -18,6 +18,22 @@ STATE_DIR=/opt/whatsapp-scheduler/state BACKUP_DIR=/opt/whatsapp-scheduler/backu
 
 En produccion, usar los valores reales definidos en `.env` o exportarlos desde el entorno del servicio.
 
+## Retencion y rotacion
+La politica por defecto conserva backups por `30` dias y mantiene siempre al menos los `7` backups mas recientes, aunque sean mas antiguos que 30 dias.
+
+Variables configurables:
+```bash
+BACKUP_RETENTION_DAYS=30
+BACKUP_RETENTION_MIN_COUNT=7
+```
+
+La rotacion corre despues de crear y checksummear correctamente el backup nuevo. Solo elimina archivos generados por este script con nombre `whatsapp-scheduler-state-*.tar.gz` y su `.sha256` asociado.
+
+Para deshabilitar el borrado por antiguedad:
+```bash
+BACKUP_RETENTION_DAYS=0 npm run backup:state
+```
+
 ## Verificar integridad
 ```bash
 cd /opt/whatsapp-scheduler/backups
@@ -59,7 +75,6 @@ journalctl -u whatsapp-scheduler -n 100 --no-pager
 
 ## Automatizacion pendiente
 - Instalar y habilitar los unit files incluidos en `deploy/systemd/`.
-- Definir retencion y rotacion.
 - Probar restore completo en entorno limpio.
 
 ## systemd timer

@@ -12,6 +12,18 @@ const stateDir = process.env.STATE_DIR
 const backupDir = process.env.BACKUP_DIR
   ? path.resolve(process.env.BACKUP_DIR)
   : path.join(path.dirname(stateDir), 'backups');
+const backupPrefix = 'whatsapp-scheduler-state-';
+const backupSuffix = '.tar.gz';
+const retentionDays = parseNonNegativeInteger(
+  process.env.BACKUP_RETENTION_DAYS,
+  30,
+  'BACKUP_RETENTION_DAYS',
+);
+const retentionMinCount = parseNonNegativeInteger(
+  process.env.BACKUP_RETENTION_MIN_COUNT,
+  7,
+  'BACKUP_RETENTION_MIN_COUNT',
+);
 
 function usage() {
   console.log(`Usage: npm run backup:state
@@ -19,6 +31,8 @@ function usage() {
 Environment:
   STATE_DIR    Directory to back up. Defaults to repo root.
   BACKUP_DIR   Directory where backups are written. Defaults to ../backups next to STATE_DIR.
+  BACKUP_RETENTION_DAYS       Delete backups older than this many days. Defaults to 30. Use 0 to disable age pruning.
+  BACKUP_RETENTION_MIN_COUNT  Always keep at least this many newest backups. Defaults to 7.
 `);
 }
 
@@ -32,8 +46,64 @@ function isInside(childPath, parentPath) {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function parseNonNegativeInteger(value, fallback, name) {
+  if (value === undefined || value === '') {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    fail(`${name} must be a non-negative integer`);
+  }
+
+  return parsed;
+}
+
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function listBackups() {
+  return fs.readdirSync(backupDir)
+    .filter(fileName => fileName.startsWith(backupPrefix) && fileName.endsWith(backupSuffix))
+    .map(fileName => {
+      const archivePath = path.join(backupDir, fileName);
+      const stat = fs.statSync(archivePath);
+
+      return {
+        fileName,
+        archivePath,
+        checksumPath: `${archivePath}.sha256`,
+        isFile: stat.isFile(),
+        mtimeMs: stat.mtimeMs,
+      };
+    })
+    .filter(backup => backup.isFile)
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+}
+
+function pruneOldBackups() {
+  if (retentionDays === 0) {
+    console.log('Backup retention: age pruning disabled');
+    return;
+  }
+
+  const cutoffMs = Date.now() - (retentionDays * 24 * 60 * 60 * 1000);
+  const backups = listBackups();
+  const removable = backups
+    .slice(retentionMinCount)
+    .filter(backup => backup.mtimeMs < cutoffMs);
+
+  if (removable.length === 0) {
+    console.log(`Backup retention: no old backups to delete (days=${retentionDays}, min=${retentionMinCount})`);
+    return;
+  }
+
+  for (const backup of removable) {
+    fs.rmSync(backup.archivePath, { force: true });
+    fs.rmSync(backup.checksumPath, { force: true });
+    console.log(`Backup retention: deleted ${backup.fileName}`);
+  }
 }
 
 function sha256File(filePath) {
@@ -67,7 +137,7 @@ async function main() {
 
   fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
 
-  const archiveName = `whatsapp-scheduler-state-${timestamp()}.tar.gz`;
+  const archiveName = `${backupPrefix}${timestamp()}${backupSuffix}`;
   const archivePath = path.join(backupDir, archiveName);
 
   const tar = spawnSync('tar', [
@@ -111,6 +181,8 @@ async function main() {
 
   console.log(`Backup created: ${archivePath}`);
   console.log(`Checksum: ${checksumPath}`);
+
+  pruneOldBackups();
 }
 
 main().catch(error => fail(error.message));

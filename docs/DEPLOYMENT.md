@@ -234,6 +234,15 @@ Resultado esperado:
 whatsapp-scheduler-state-...tar.gz: OK
 ```
 
+Politica de retencion configurada:
+
+```text
+BACKUP_RETENTION_DAYS=30
+BACKUP_RETENTION_MIN_COUNT=7
+```
+
+La rotacion corre al final de cada backup exitoso. El script conserva siempre los backups mas recientes indicados por `BACKUP_RETENTION_MIN_COUNT` y solo borra archivos propios `whatsapp-scheduler-state-*.tar.gz` junto con su `.sha256`.
+
 ## systemd - Backup Timer
 
 Unit files incluidos:
@@ -288,6 +297,7 @@ Checklist minima:
 - [ ] `whatsapp-scheduler-backup.timer` esta `enabled` y `active (waiting)`.
 - [ ] Backup manual genera `.tar.gz` y `.sha256`.
 - [ ] `sha256sum -c` devuelve `OK`.
+- [ ] Politica de retencion documentada y aplicada por el unit file de backup.
 
 ## Validacion Post-Reboot
 
@@ -482,7 +492,6 @@ Ya validado:
 
 Pendiente recomendado:
 
-- Definir retencion y rotacion de backups.
 - Probar restore completo en entorno limpio.
 - Revisar permisos finales de `.env`, `STATE_DIR` y backups.
 - Confirmar periodicamente `ALLOW_LOCAL_WEB_SETUP=false`.

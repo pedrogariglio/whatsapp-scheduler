@@ -43,8 +43,8 @@
 
 ## Hardening / produccion
 - [x] Habilitar y validar backups periodicos de `STATE_DIR` en el servidor.
-- [ ] Definir retencion de backups y politica de rotacion.
-- [ ] Probar restauracion de backup en un directorio limpio antes de considerarlo confiable.
+- [x] Definir retencion de backups y politica de rotacion.
+- [x] Probar restauracion de backup en un directorio limpio antes de considerarlo confiable.
 - [ ] Asegurar permisos restrictivos sobre `STATE_DIR`, `.env` y backups.
 - [ ] Confirmar que `ALLOW_LOCAL_WEB_SETUP=false` en produccion.
 - [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
@@ -68,6 +68,8 @@
 - [x] Validar ejecucion manual de `whatsapp-scheduler-backup.service` en el servidor.
 - [x] Verificar `whatsapp-scheduler-backup.timer` activo despues del reboot.
 - [x] Documentar comando de restore y orden de parada/arranque del servicio.
+- [x] Aplicar rotacion automatica con `BACKUP_RETENTION_DAYS=30` y `BACKUP_RETENTION_MIN_COUNT=7`.
+- [x] Validar restore en directorio limpio con checksum OK y comparacion de archivos restaurados.
 
 ## Monitoreo
 - [ ] Definir chequeo simple de salud HTTP para el panel/API.

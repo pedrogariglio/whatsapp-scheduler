@@ -8,6 +8,8 @@ Group=pedrogariglio
 WorkingDirectory=/home/pedrogariglio/whatsapp-scheduler
 EnvironmentFile=/home/pedrogariglio/whatsapp-scheduler/.env
 Environment=BACKUP_DIR=/opt/whatsapp-scheduler/backups
+Environment=BACKUP_RETENTION_DAYS=30
+Environment=BACKUP_RETENTION_MIN_COUNT=7
 Environment=PATH=/home/pedrogariglio/.nvm/versions/node/v20.20.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/bin/env npm run backup:state
 PrivateTmp=true

@@ -182,3 +182,26 @@
   Documentacion operativa
 
   - Completado docs/DEPLOYMENT.md como guia profesional de despliegue Ubuntu headless con systemd, WireGuard, STATE_DIR, backups, validacion y troubleshooting.
+
+  Continuacion 2026-05-08
+
+  - Definida politica de retencion y rotacion de backups.
+  - Agregadas variables BACKUP_RETENTION_DAYS y BACKUP_RETENTION_MIN_COUNT al script de backup.
+  - Politica por defecto: conservar backups por 30 dias y mantener siempre al menos 7 backups recientes.
+  - La rotacion corre solo despues de crear backup y checksum exitosamente.
+  - La limpieza se limita a archivos propios whatsapp-scheduler-state-*.tar.gz y sus .sha256 asociados.
+  - Agregadas variables de retencion al unit file whatsapp-scheduler-backup.service.
+  - Validada rotacion con STATE_DIR temporal en /tmp, sin tocar estado real.
+  - Validado checksum OK del backup temporal generado durante la prueba.
+  - Actualizados docs/BACKUP.md, docs/DEPLOYMENT.md y docs/TODO.md.
+  - Probado restore completo en directorio limpio usando STATE_DIR temporal en /tmp.
+  - Validado checksum antes del restore.
+  - Validada restauracion de config.json, data/scheduler.db, .wwebjs_auth y uploads pendientes.
+  - Comparados archivos restaurados contra origen temporal con cmp.
+
+  Pendiente actualizado
+
+  - asegurar permisos restrictivos sobre STATE_DIR, .env y backups
+  - evaluar hardening de Chromium no dependiente de Snap o resolver warning de xdg-settings/cgroup
+  - agregar monitoreo liviano
+  - evaluar migracion de sql.js a better-sqlite3
