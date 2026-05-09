@@ -205,3 +205,28 @@
   - evaluar hardening de Chromium no dependiente de Snap o resolver warning de xdg-settings/cgroup
   - agregar monitoreo liviano
   - evaluar migracion de sql.js a better-sqlite3
+
+  Continuacion 2026-05-09
+
+  - Analizado problema post-reboot asociado a mounts de Docker netns y desmontaje masivo de snaps.
+  - Definido camino de hardening: sacar Chromium Snap del host y ejecutar Chromium dentro de un contenedor Docker junto con la app.
+  - Agregado Dockerfile basado en node:20-bookworm-slim con Chromium instalado via apt dentro de la imagen.
+  - Agregado compose.yml para montar /opt/whatsapp-scheduler/state en /state y publicar el panel.
+  - Configurado CHROME_BIN=/usr/bin/chromium y STATE_DIR=/state para runtime Docker.
+  - Agregado PANEL_BIND opcional para publicar el panel solo sobre WireGuard, por ejemplo 10.0.0.1.
+  - Agregado unit alternativo deploy/systemd/whatsapp-scheduler-docker.service para operar Docker Compose desde systemd.
+  - Actualizada documentacion de despliegue con procedimiento de prueba, migracion y rollback implicito manteniendo el unit host existente.
+  - Validado docker compose config correctamente.
+  - Construida imagen local whatsapp-scheduler:local correctamente.
+  - Validado Chromium dentro de la imagen: Chromium 148.0.7778.96 sobre Debian 12 bookworm.
+
+  Pendiente actualizado
+
+  - confirmar que WhatsApp llega a ready dentro del contenedor sin nuevo QR
+  - validar acceso por WireGuard y envio de prueba
+  - migrar systemd desde whatsapp-scheduler.service a whatsapp-scheduler-docker.service
+  - tras validar Docker, evaluar remocion de Chromium Snap y snaps de escritorio innecesarios
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-05-09.md para objetivos, cambios realizados, problemas, soluciones y proximos pasos de la sesion.

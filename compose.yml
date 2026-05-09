@@ -1,0 +1,24 @@
+services:
+  whatsapp-scheduler:
+    build:
+      context: .
+    image: whatsapp-scheduler:local
+    container_name: whatsapp-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      STATE_DIR: /state
+      CHROME_BIN: /usr/bin/chromium
+    ports:
+      - "${PANEL_BIND:-0.0.0.0}:${PORT:-3001}:3001"
+    volumes:
+      - /opt/whatsapp-scheduler/state:/state
+    shm_size: "512mb"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true

@@ -49,8 +49,9 @@
 - [ ] Confirmar que `ALLOW_LOCAL_WEB_SETUP=false` en produccion.
 - [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
 - [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
-- [ ] Evaluar si conviene fijar `CHROME_BIN` a una ruta estable no dependiente de Snap.
-- [ ] Revisar warning post-reboot de Chromium Snap: `xdg-settings: not found` y `not a snap cgroup`.
+- [x] Preparar despliegue Docker con Chromium dentro del contenedor para eliminar dependencia de Snap.
+- [ ] Validar despliegue Docker en servidor y migrar desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
+- [ ] Revisar warning post-reboot de Chromium Snap tras validar migracion Docker: `xdg-settings: not found` y `not a snap cgroup`.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
 - [ ] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.

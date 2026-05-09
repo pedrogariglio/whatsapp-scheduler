@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.env
+state
+data
+uploads
+config.json
+.wwebjs_auth
+.wwebjs_cache
+docs/sessions/*.tmp
+*.tar
+*.tar.gz
+*.sha256
+*.log

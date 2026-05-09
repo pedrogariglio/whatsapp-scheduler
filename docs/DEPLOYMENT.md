@@ -88,10 +88,18 @@ Variables relevantes:
 | `HOST` | `0.0.0.0` | Necesario para acceso por WireGuard. |
 | `SESSION_SECRET` | secreto largo | Obligatorio, minimo 32 caracteres. |
 | `STATE_DIR` | `/opt/whatsapp-scheduler/state` | Estado persistente fuera del repo. |
-| `CHROME_BIN` | `/usr/bin/chromium-browser` | Ruta del navegador headless. |
+| `CHROME_BIN` | `/usr/bin/chromium-browser` en host, `/usr/bin/chromium` en Docker | Ruta del navegador headless. |
 | `TRUST_PROXY` | `false` | Mantener `false` si no hay reverse proxy. |
 | `COOKIE_SECURE` | `false` | Usar `true` solo con HTTPS. |
 | `ALLOW_LOCAL_WEB_SETUP` | `false` | Setup web deshabilitado en produccion. |
+
+Para despliegue Docker, agregar opcionalmente:
+
+```env
+PANEL_BIND=10.0.0.1
+```
+
+`PANEL_BIND` limita el puerto publicado al address de WireGuard. Si no se define, `compose.yml` publica en `0.0.0.0` y la restriccion queda a cargo de `ufw`.
 
 ## Preparacion Inicial
 
@@ -210,6 +218,57 @@ Notas del unit actual:
 - Mantiene `ProtectSystem=full`.
 - Permite escritura en repo y `STATE_DIR` con `ReadWritePaths`.
 - No usa `NoNewPrivileges=true` por incompatibilidad observada con Chromium via Snap.
+
+## systemd - Servicio Docker
+
+Este modo evita depender del Chromium Snap del host. La imagen instala Chromium dentro del contenedor y la app usa:
+
+```env
+CHROME_BIN=/usr/bin/chromium
+STATE_DIR=/state
+```
+
+El estado real sigue persistiendo en el host:
+
+```text
+/opt/whatsapp-scheduler/state
+```
+
+Probar manualmente:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+docker compose up -d --build
+docker compose logs -f whatsapp-scheduler
+```
+
+Validar:
+
+```bash
+docker compose ps
+curl -i http://10.0.0.1:3001/login.html
+```
+
+Instalar el unit alternativo:
+
+```bash
+sudo systemctl disable --now whatsapp-scheduler.service
+sudo cp deploy/systemd/whatsapp-scheduler-docker.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler-docker.service
+```
+
+Operacion diaria:
+
+```bash
+sudo systemctl restart whatsapp-scheduler-docker
+sudo systemctl stop whatsapp-scheduler-docker
+sudo systemctl start whatsapp-scheduler-docker
+journalctl -u whatsapp-scheduler-docker -n 100 --no-pager
+docker compose logs -n 150 whatsapp-scheduler
+```
+
+No remover Chromium Snap ni otros snaps del host hasta validar que el contenedor llega a `WhatsApp Web listo para enviar mensajes`, que el panel abre por WireGuard y que un mensaje de prueba queda en `Sent`.
 
 ## Backups
 
@@ -415,7 +474,7 @@ Estado actual:
 
 - El problema no bloqueo produccion.
 - El watchdog recupero el cliente y llego a `ready`.
-- Queda como hardening pendiente evaluar Chromium/Chrome no dependiente de Snap o resolver dependencias de entorno.
+- Se preparo despliegue Docker para ejecutar Chromium dentro del contenedor y eliminar la dependencia del Snap del host.
 
 Acciones:
 
@@ -423,6 +482,15 @@ Acciones:
 journalctl -u whatsapp-scheduler -n 150 --no-pager
 systemctl restart whatsapp-scheduler
 ```
+
+Ruta de hardening recomendada:
+
+```bash
+docker compose up -d --build
+docker compose logs -f whatsapp-scheduler
+```
+
+Si el contenedor queda validado, migrar a `whatsapp-scheduler-docker.service` y recien despues evaluar remover paquetes Snap no requeridos por el servidor headless.
 
 ### WhatsApp queda autenticado pero no llega a ready
 
