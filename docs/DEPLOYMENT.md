@@ -242,6 +242,34 @@ docker compose up -d --build
 docker compose logs -f whatsapp-scheduler
 ```
 
+Smoke test local aislado opcional antes de tocar el servidor:
+
+```bash
+mkdir -p /tmp/whatsapp-scheduler-smoke-state
+docker run --rm \
+  --name whatsapp-scheduler-smoke \
+  -e SESSION_SECRET=0123456789abcdef0123456789abcdef \
+  -e STATE_DIR=/state \
+  -e HOST=0.0.0.0 \
+  -e PORT=3001 \
+  -e CHROME_BIN=/usr/bin/chromium \
+  -e ALLOW_LOCAL_WEB_SETUP=false \
+  -e TRUST_PROXY=false \
+  -e COOKIE_SECURE=false \
+  -v /tmp/whatsapp-scheduler-smoke-state:/state \
+  -p 127.0.0.1:3301:3001 \
+  whatsapp-scheduler:local
+```
+
+En ese smoke test el `STATE_DIR` esta vacio a proposito. Lo esperable es:
+
+- la app levanta HTTP correctamente
+- `/login.html` devuelve `503 Admin setup required`
+- `/health` devuelve `503 Admin setup required`
+- WhatsApp muestra un QR efimero porque no existe sesion persistida
+
+Ese smoke test solo valida build y arranque basico del runtime Docker. No reemplaza la validacion real en servidor con el `STATE_DIR` productivo.
+
 Validar:
 
 ```bash
@@ -269,6 +297,107 @@ docker compose logs -n 150 whatsapp-scheduler
 ```
 
 No remover Chromium Snap ni otros snaps del host hasta validar que el contenedor llega a `WhatsApp Web listo para enviar mensajes`, que el panel abre por WireGuard y que un mensaje de prueba queda en `Sent`.
+
+### Runbook seguro de validacion Docker en servidor
+
+Orden recomendado, sin reemplazar todavia el servicio host:
+
+1. Confirmar estado actual del servicio productivo host.
+2. Confirmar backup reciente de `STATE_DIR`.
+3. Levantar Docker manualmente en un puerto alternativo temporal y seguir logs.
+4. Validar `ready`, panel por WireGuard y envio de prueba.
+5. Solo si todo queda OK, migrar `systemd`.
+
+Preflight en servidor:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+systemctl status whatsapp-scheduler --no-pager
+systemctl status whatsapp-scheduler-backup.timer --no-pager
+ls -lh /opt/whatsapp-scheduler/backups | tail -n 5
+docker --version
+docker compose version
+```
+
+Recomendado antes de probar Docker:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+npm run backup:state
+```
+
+Prueba manual de Docker, manteniendo todavia el servicio host como referencia:
+
+Importante: si `whatsapp-scheduler.service` sigue corriendo en el host, Docker no puede publicar tambien `3001` al mismo tiempo. Para una validacion segura sin apagar el servicio actual, usar un puerto alternativo temporal, por ejemplo `3301`.
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build
+docker compose logs -f whatsapp-scheduler
+```
+
+Senales esperadas en logs:
+
+- `Servidor corriendo en http://0.0.0.0:3001`
+- `Autenticado correctamente. Sesion guardada.`
+- `WhatsApp Web listo para enviar mensajes.`
+
+Validacion funcional minima:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+docker compose ps
+curl -i http://10.0.0.1:3301/login.html
+curl -i http://10.0.0.1:3301/health
+```
+
+Checklist de aprobacion:
+
+- [ ] El contenedor queda `Up` en `docker compose ps`.
+- [ ] Los logs llegan a `WhatsApp Web listo para enviar mensajes`.
+- [ ] El panel abre por WireGuard en el puerto temporal de prueba.
+- [ ] El login del panel funciona.
+- [ ] El testigo del panel queda verde.
+- [ ] Un mensaje de prueba se envia y queda en `Sent`.
+- [ ] No aparece pedido de nuevo QR.
+
+Si alguna de esas validaciones falla, cortar la prueba Docker y volver al estado actual:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+docker compose down
+systemctl status whatsapp-scheduler --no-pager
+journalctl -u whatsapp-scheduler -n 150 --no-pager
+```
+
+Migracion de `systemd` solo despues de validar Docker:
+
+Antes de habilitar el unit Docker, volver a la configuracion normal del panel en `3001` y recien ahi reemplazar el servicio host.
+
+```bash
+sudo systemctl disable --now whatsapp-scheduler.service
+sudo cp deploy/systemd/whatsapp-scheduler-docker.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler-docker.service
+```
+
+Verificacion inmediata post-migracion:
+
+```bash
+sudo systemctl status whatsapp-scheduler-docker --no-pager
+journalctl -u whatsapp-scheduler-docker -n 100 --no-pager
+docker compose logs -n 150 whatsapp-scheduler
+```
+
+Rollback inmediato si la migracion de `systemd` sale mal:
+
+```bash
+sudo systemctl disable --now whatsapp-scheduler-docker.service
+docker compose down
+sudo systemctl enable --now whatsapp-scheduler.service
+sudo systemctl status whatsapp-scheduler --no-pager
+journalctl -u whatsapp-scheduler -n 150 --no-pager
+```
 
 ## Backups
 

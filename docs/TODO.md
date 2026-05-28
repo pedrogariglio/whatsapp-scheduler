@@ -51,6 +51,13 @@
 - [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
 - [x] Preparar despliegue Docker con Chromium dentro del contenedor para eliminar dependencia de Snap.
 - [ ] Validar despliegue Docker en servidor y migrar desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
+- [ ] Ejecutar preflight en servidor antes de la prueba Docker: servicio host, backup reciente, `docker --version` y `docker compose version`.
+- [ ] Retomar la validacion Docker cuando vuelva a estar disponible el acceso operativo al servidor desde la workstation.
+- [ ] Levantar Docker manualmente en servidor con `PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build` y seguir logs para no chocar con el `3001` del servicio host.
+- [ ] Confirmar en logs `WhatsApp Web listo para enviar mensajes` sin pedir nuevo QR.
+- [ ] Validar acceso al panel por WireGuard, login, testigo verde y envio de prueba con estado `Sent`.
+- [ ] Migrar `systemd` a Docker solo despues de validar manualmente el contenedor.
+- [ ] Dejar preparado rollback inmediato a `whatsapp-scheduler.service` si falla la migracion de `systemd`.
 - [ ] Revisar warning post-reboot de Chromium Snap tras validar migracion Docker: `xdg-settings: not found` y `not a snap cgroup`.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
@@ -100,3 +107,7 @@
 - [ ] Evaluar estrategia para detectar y recuperar desconexiones silenciosas de WhatsApp Web.
 - [ ] Evaluar empaquetado o instalador Linux para reducir pasos manuales de despliegue.
 - [ ] Evaluar cifrado o proteccion adicional para backups que contienen estado sensible.
+
+## Bloqueos actuales
+- [ ] Acceso operativo al servidor pendiente para ejecutar preflight, prueba Docker y migracion final.
+- [ ] Confirmar si el acceso remoto del siguiente intento sera por WireGuard/SSH desde la workstation en lugar del alias LAN `minipc`.

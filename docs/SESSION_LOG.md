@@ -230,3 +230,65 @@
   Resumen estructurado
 
   - Ver docs/sessions/session-2026-05-09.md para objetivos, cambios realizados, problemas, soluciones y proximos pasos de la sesion.
+
+  Continuacion 2026-05-23
+
+  - Retomado el proyecto desde docs/SESSION_LOG.md, docs/TODO.md y docs/sessions/session-2026-05-09.md sin asumir cambios no documentados.
+  - Confirmado que el ultimo checkpoint funcional validado sigue siendo el servicio host con whatsapp-scheduler.service, WireGuard, backups y post-reboot OK.
+  - Revalidado localmente docker compose config correctamente.
+  - Revalidada construccion local de la imagen whatsapp-scheduler:local correctamente.
+  - Revalidado Chromium dentro de la imagen: Chromium 148.0.7778.96 sobre Debian 12 bookworm.
+  - Ejecutado smoke test aislado del contenedor con STATE_DIR temporal en /tmp, sin tocar estado real ni servicio productivo.
+  - Confirmado arranque HTTP del contenedor en http://127.0.0.1:3301.
+  - Confirmada respuesta 503 esperada en /login.html y /health al usar STATE_DIR temporal sin admin configurado.
+  - Confirmado QR efimero dentro del contenedor temporal, consistente con arranque sin sesion persistida.
+  - No se detectaron bloqueos locales que impidan avanzar con la validacion Docker en el servidor.
+  - Documentado runbook de validacion Docker en servidor con preflight, validacion funcional, migracion de systemd y rollback inmediato.
+  - Corregido el runbook para evitar conflicto de puertos con el servicio host: la validacion manual Docker en servidor debe usar puerto temporal, por ejemplo 3301 sobre WireGuard.
+
+  Pendiente actualizado
+
+  - confirmar que WhatsApp llega a ready dentro del contenedor usando el STATE_DIR real del servidor y sin nuevo QR
+  - validar acceso al panel por WireGuard y envio de prueba con estado Sent
+  - migrar systemd desde whatsapp-scheduler.service a whatsapp-scheduler-docker.service solo despues de validar Docker
+  - tras validar Docker, evaluar remocion de Chromium Snap y snaps de escritorio innecesarios
+  - mantener pendiente la revision de permisos restrictivos sobre STATE_DIR, .env y backups
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-05-23.md para la validacion local aislada del runtime Docker y el proximo paso operativo en servidor.
+
+  Continuacion 2026-05-24
+
+  - No se ejecutaron aun pasos de la secuencia recomendada sobre el servidor.
+  - Se confirmo que la continuidad correcta sigue siendo: validar Docker en servidor usando puerto temporal 3301, completar las 4 validaciones funcionales y recien despues migrar systemd.
+  - Se intento diagnosticar acceso remoto desde esta sesion usando el alias SSH local minipc.
+  - Los chequeos remotos fallaron con timeout hacia 192.168.18.29:22.
+  - Se concluyo que no hubo conectividad util al servidor desde esta sesion y que la ejecucion remota debe retomarse manana desde la workstation del usuario.
+  - No se modifico codigo de aplicacion ni se toco el estado productivo.
+  - Se actualizaron los docs para dejar asentado el bloqueo operativo y el punto exacto de retome.
+
+  Decisiones importantes
+
+  - No asumir validaciones remotas no ejecutadas.
+  - No migrar systemd ni tocar el servicio host hasta completar las 4 comprobaciones funcionales en el servidor.
+  - Mantener como plan vigente la validacion manual de Docker en 10.0.0.1:3301 para evitar conflicto con el 3001 del servicio host.
+
+  Problemas encontrados
+
+  - Sin acceso operativo al servidor en esta sesion.
+  - Timeout de SSH usando el alias minipc configurado localmente contra 192.168.18.29:22.
+
+  Proximos pasos
+
+  - Hacer git push desde la workstation.
+  - En el servidor, ejecutar git pull y el preflight documentado.
+  - Crear backup manual de STATE_DIR antes de la prueba Docker.
+  - Levantar Docker manualmente con PANEL_BIND=10.0.0.1 y PORT=3301.
+  - Confirmar en logs WhatsApp ready sin nuevo QR.
+  - Validar panel por WireGuard, login, testigo verde y envio de prueba con estado Sent.
+  - Solo despues de completar esas validaciones, migrar systemd a whatsapp-scheduler-docker.service.
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-05-24.md para el cierre documental de la sesion bloqueada por falta de acceso al servidor y el punto exacto de retome.
