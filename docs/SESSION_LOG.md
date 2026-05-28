@@ -313,3 +313,35 @@
   Resumen estructurado
 
   - Ver docs/TODO.md y docs/DEPLOYMENT.md para el procedimiento corregido de persistencia Docker con hostname estable y limpieza de locks.
+
+  Cierre 2026-05-28
+
+  - Ejecutado preflight operativo en servidor y backup manual de STATE_DIR antes de la migracion.
+  - Validado Docker manualmente en `10.0.0.1:3301` con el servicio host detenido.
+  - Confirmados login OK, testigo verde y envio correcto de mensaje programado desde la UI en Docker.
+  - Detectado reenrolamiento necesario: la cuenta ya no estaba vinculada y el QR nuevo era consistente con sesion invalida o inexistente.
+  - Reenrolada la cuenta en Docker y validado `Autenticado correctamente. Sesion guardada.` seguido de `WhatsApp Web listo para enviar mensajes.`
+  - Detectado fallo de persistencia en reinicio controlado por lock de perfil Chromium `profile appears to be in use by another Chromium process on another computer`.
+  - Confirmada causa operativa: hostname variable del contenedor entre recreaciones, incompatible con el lock del perfil persistido.
+  - Aplicado fix en `compose.yml` fijando `hostname: whatsapp-scheduler`.
+  - Limpiados locks stale `Singleton*` y `Lock*` dentro de `.wwebjs_auth` con el servicio host detenido.
+  - Revalidada persistencia en Docker sin QR nuevo y sin error de `profile in use`.
+  - Actualizado `.env` del servidor con `PANEL_BIND=10.0.0.1` para publicar el panel solo sobre WireGuard.
+  - Ejecutado cutover final de `systemd` desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
+  - Confirmado `docker compose ps` con bind `10.0.0.1:3001->3001/tcp`.
+  - Confirmado estado final en produccion:
+      - login correcto en `http://10.0.0.1:3001/`
+      - testigo verde
+      - mensaje programado enviado correctamente
+      - app corriendo en Docker como servicio principal
+
+  Pendiente actualizado
+
+  - validar reboot completo usando `whatsapp-scheduler-docker.service`
+  - revisar warning legacy de Chromium Snap y evaluar remocion de paquetes Snap no necesarios
+  - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-05-28.md para el cierre completo de la migracion a Docker y la validacion funcional final en produccion.

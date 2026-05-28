@@ -50,15 +50,15 @@
 - [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
 - [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
 - [x] Preparar despliegue Docker con Chromium dentro del contenedor para eliminar dependencia de Snap.
-- [ ] Validar despliegue Docker en servidor y migrar desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
-- [ ] Ejecutar preflight en servidor antes de la prueba Docker: servicio host, backup reciente, `docker --version` y `docker compose version`.
-- [ ] Retomar la validacion Docker cuando vuelva a estar disponible el acceso operativo al servidor desde la workstation.
-- [ ] Levantar Docker manualmente en servidor con `PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build` y seguir logs para no chocar con el `3001` del servicio host.
-- [ ] Confirmar en logs `WhatsApp Web listo para enviar mensajes` sin pedir nuevo QR.
-- [ ] Validar acceso al panel por WireGuard, login, testigo verde y envio de prueba con estado `Sent`.
-- [ ] Validar reinicio controlado de Docker sin QR nuevo y sin error `profile appears to be in use by another Chromium process`.
-- [ ] Migrar `systemd` a Docker solo despues de validar manualmente el contenedor.
-- [ ] Dejar preparado rollback inmediato a `whatsapp-scheduler.service` si falla la migracion de `systemd`.
+- [x] Validar despliegue Docker en servidor y migrar desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
+- [x] Ejecutar preflight en servidor antes de la prueba Docker: servicio host, backup reciente, `docker --version` y `docker compose version`.
+- [x] Retomar la validacion Docker cuando vuelva a estar disponible el acceso operativo al servidor desde la workstation.
+- [x] Levantar Docker manualmente en servidor con `PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build` y seguir logs para no chocar con el `3001` del servicio host.
+- [x] Confirmar en logs `WhatsApp Web listo para enviar mensajes` sin pedir nuevo QR.
+- [x] Validar acceso al panel por WireGuard, login, testigo verde y envio de prueba con estado `Sent`.
+- [x] Validar reinicio controlado de Docker sin QR nuevo y sin error `profile appears to be in use by another Chromium process`.
+- [x] Migrar `systemd` a Docker solo despues de validar manualmente el contenedor.
+- [x] Dejar preparado rollback inmediato a `whatsapp-scheduler.service` si falla la migracion de `systemd`.
 - [ ] Revisar warning post-reboot de Chromium Snap tras validar migracion Docker: `xdg-settings: not found` y `not a snap cgroup`.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
@@ -110,5 +110,5 @@
 - [ ] Evaluar cifrado o proteccion adicional para backups que contienen estado sensible.
 
 ## Bloqueos actuales
-- [ ] Acceso operativo al servidor pendiente para ejecutar preflight, prueba Docker y migracion final.
-- [ ] Confirmar si el acceso remoto del siguiente intento sera por WireGuard/SSH desde la workstation en lugar del alias LAN `minipc`.
+- [ ] Validar reboot completo con `whatsapp-scheduler-docker.service` como servicio principal.
+- [ ] Confirmar si ya no quedan dependencias operativas del host legacy antes de retirar Chromium Snap.
