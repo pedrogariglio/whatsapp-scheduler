@@ -292,3 +292,24 @@
   Resumen estructurado
 
   - Ver docs/sessions/session-2026-05-24.md para el cierre documental de la sesion bloqueada por falta de acceso al servidor y el punto exacto de retome.
+
+  Continuacion 2026-05-28
+
+  - Ejecutado backup manual de STATE_DIR en servidor antes de la validacion Docker.
+  - Validado arranque funcional del contenedor Docker en puerto temporal 3301 con el servicio host detenido.
+  - Confirmados login OK, testigo verde y envio correcto de mensaje programado desde la UI en Docker.
+  - Al probar persistencia con `docker compose down` + `up`, Chromium fallo con `profile appears to be in use by another Chromium process on another computer`.
+  - Identificada causa operativa probable: hostname variable del contenedor entre recreaciones, incompatible con el lock del perfil persistido de Chromium.
+  - Ajustado `compose.yml` para fijar `hostname: whatsapp-scheduler`.
+  - Actualizada documentacion operativa con limpieza unica de `Singleton*` y `Lock*` en `.wwebjs_auth` antes de reintentar la persistencia.
+
+  Pendiente actualizado
+
+  - hacer git push/pull del ajuste de `compose.yml` y docs
+  - con el servicio host detenido, limpiar locks stale de `.wwebjs_auth`
+  - relanzar Docker y validar persistencia sin QR nuevo ni error de `profile in use`
+  - si la persistencia queda OK, migrar systemd a whatsapp-scheduler-docker.service
+
+  Resumen estructurado
+
+  - Ver docs/TODO.md y docs/DEPLOYMENT.md para el procedimiento corregido de persistencia Docker con hostname estable y limpieza de locks.

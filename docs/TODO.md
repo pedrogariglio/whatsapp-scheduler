@@ -56,6 +56,7 @@
 - [ ] Levantar Docker manualmente en servidor con `PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build` y seguir logs para no chocar con el `3001` del servicio host.
 - [ ] Confirmar en logs `WhatsApp Web listo para enviar mensajes` sin pedir nuevo QR.
 - [ ] Validar acceso al panel por WireGuard, login, testigo verde y envio de prueba con estado `Sent`.
+- [ ] Validar reinicio controlado de Docker sin QR nuevo y sin error `profile appears to be in use by another Chromium process`.
 - [ ] Migrar `systemd` a Docker solo despues de validar manualmente el contenedor.
 - [ ] Dejar preparado rollback inmediato a `whatsapp-scheduler.service` si falla la migracion de `systemd`.
 - [ ] Revisar warning post-reboot de Chromium Snap tras validar migracion Docker: `xdg-settings: not found` y `not a snap cgroup`.

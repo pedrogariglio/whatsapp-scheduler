@@ -234,6 +234,8 @@ El estado real sigue persistiendo en el host:
 /opt/whatsapp-scheduler/state
 ```
 
+`compose.yml` fija `hostname: whatsapp-scheduler` para que Chromium vea un hostname estable entre recreaciones del contenedor. Esto evita falsos conflictos del tipo `profile appears to be in use by another Chromium process on another computer` al reutilizar el perfil persistido.
+
 Probar manualmente:
 
 ```bash
@@ -336,6 +338,27 @@ PANEL_BIND=10.0.0.1 PORT=3301 docker compose up -d --build
 docker compose logs -f whatsapp-scheduler
 ```
 
+Si un intento anterior creo el perfil con otro hostname de contenedor y luego aparece este error:
+
+```text
+The profile appears to be in use by another Chromium process on another computer
+```
+
+hacer una limpieza unica de locks stale, siempre con el servicio host detenido y sin ningun Chromium corriendo:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+docker compose down
+sudo systemctl stop whatsapp-scheduler
+pgrep -a chromium
+pgrep -a chrome
+cd /opt/whatsapp-scheduler/state
+find .wwebjs_auth -name 'Singleton*' -delete
+find .wwebjs_auth -name 'Lock*' -delete
+```
+
+No borrar `.wwebjs_auth` completa salvo que se quiera forzar reenrolamiento por QR.
+
 Senales esperadas en logs:
 
 - `Servidor corriendo en http://0.0.0.0:3001`
@@ -360,6 +383,7 @@ Checklist de aprobacion:
 - [ ] El testigo del panel queda verde.
 - [ ] Un mensaje de prueba se envia y queda en `Sent`.
 - [ ] No aparece pedido de nuevo QR.
+- [ ] Reinicio controlado de Docker reutiliza la sesion sin error de `profile in use`.
 
 Si alguna de esas validaciones falla, cortar la prueba Docker y volver al estado actual:
 

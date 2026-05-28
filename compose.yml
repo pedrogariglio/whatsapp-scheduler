@@ -4,6 +4,7 @@ services:
       context: .
     image: whatsapp-scheduler:local
     container_name: whatsapp-scheduler
+    hostname: whatsapp-scheduler
     restart: unless-stopped
     env_file:
       - .env
