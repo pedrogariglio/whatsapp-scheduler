@@ -43,7 +43,7 @@ sha256sum -c whatsapp-scheduler-state-YYYY-MM-DDTHH-MM-SS-msZ.tar.gz.sha256
 ## Restaurar backup
 1. Detener el servicio:
 ```bash
-sudo systemctl stop whatsapp-scheduler
+sudo systemctl stop whatsapp-scheduler-docker.service
 ```
 
 2. Preservar el estado actual antes de sobrescribir:
@@ -61,9 +61,9 @@ sudo chown -R pedrogariglio:pedrogariglio /opt/whatsapp-scheduler/state
 
 4. Reiniciar y validar:
 ```bash
-sudo systemctl start whatsapp-scheduler
-sudo systemctl status whatsapp-scheduler
-journalctl -u whatsapp-scheduler -n 100 --no-pager
+sudo systemctl start whatsapp-scheduler-docker.service
+sudo systemctl status whatsapp-scheduler-docker.service
+journalctl -u whatsapp-scheduler-docker.service -n 100 --no-pager
 ```
 
 ## Validacion post-restore

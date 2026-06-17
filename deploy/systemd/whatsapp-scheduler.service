@@ -1,3 +1,8 @@
+# Deprecated legacy host runtime.
+# Production uses `deploy/systemd/whatsapp-scheduler-docker.service`.
+# Do not enable this unit as rollback without first reinstalling/configuring
+# a working host Chromium and validating the full legacy path end-to-end.
+
 [Unit]
 Description=WhatsApp Scheduler
 After=network-online.target

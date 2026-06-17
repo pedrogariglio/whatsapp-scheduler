@@ -345,3 +345,80 @@
   Resumen estructurado
 
   - Ver docs/sessions/session-2026-05-28.md para el cierre completo de la migracion a Docker y la validacion funcional final en produccion.
+
+  Continuacion 2026-05-30
+
+  - Detectado bloqueo operativo del host para reboot remoto: el HP EliteDesk no completa un boot headless confiable sin monitor conectado y la red no levanta.
+  - Confirmado que no hubo workaround util desde BIOS: la opcion de configuracion VGA no estuvo disponible y el adaptador `DP-HDMI` no resolvio el problema.
+  - Ejecutado reboot controlado del servidor con teclado y monitor conectados localmente.
+  - Confirmado nuevo boot `b99d79f629734b498bb36c3e1214f75c`.
+  - Confirmado `whatsapp-scheduler-docker.service` enabled y arranque automatico tras reboot.
+  - Confirmado estado final de `whatsapp-scheduler-docker.service`: `active (exited)` con `status=0/SUCCESS`.
+  - Confirmado `whatsapp-scheduler-backup.timer` `active (waiting)` tras reboot.
+  - Confirmada validacion funcional post-reboot en produccion:
+      - login correcto en `http://10.0.0.1:3001/`
+      - testigo verde
+      - mensaje programado enviado correctamente
+      - Docker operativo como servicio principal tambien despues del reboot real del host
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - confirmar si ya no quedan dependencias operativas del host legacy antes de retirar Chromium Snap
+  - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Resumen estructurado
+
+  - La migracion a Docker quedo validada end-to-end, incluido reboot real del host.
+  - El riesgo operativo abierto ya no es de la app sino del hardware/BIOS del servidor en modo headless.
+
+  Continuacion 2026-05-30 auditoria host legacy
+
+  - Auditadas dependencias residuales del runtime legacy directamente en el servidor despues del reboot validado.
+  - Confirmado que `whatsapp-scheduler.service` sigue instalado pero `disabled` e `inactive`.
+  - Confirmado que el servicio productivo vigente es `whatsapp-scheduler-docker.service`.
+  - Confirmado que `snapd.service` y `snapd.seeded.service` no existen en el host.
+  - Confirmado que el comando `snap` no existe en el host.
+  - Confirmado que no hay binarios locales de Chromium en `/usr/bin/chromium-browser` ni `/usr/bin/chromium`.
+  - Confirmado que el contenedor productivo usa `CHROME_BIN=/usr/bin/chromium` interno a la imagen y publica `10.0.0.1:3001`.
+  - Confirmado que el repo legacy y el runtime `node` de `nvm` aun existen en el host, pero el `.env` legacy apunta a `CHROME_BIN=/usr/bin/chromium-browser`, hoy ausente.
+  - Concluido que ya no quedan dependencias operativas del runtime legacy para la produccion actual en Docker.
+  - Detectado que el rollback legacy a `whatsapp-scheduler.service` ya no es inmediato ni confiable sin reinstalar o reconfigurar un navegador local del host.
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - actualizar o retirar el rollback legacy a `whatsapp-scheduler.service`
+  - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Continuacion 2026-05-31
+
+  - Adoptada la decision operativa de abandonar el rollback al servicio host legacy y estandarizar produccion como Docker-only.
+  - Actualizado `docs/DEPLOYMENT.md` para presentar `whatsapp-scheduler-docker.service` como servicio principal actual.
+  - Reemplazado el rollback legado a `whatsapp-scheduler.service` por un rollback Docker-native basado en volver a un commit o tag conocido y reconstruir la imagen.
+  - Actualizado `docs/BACKUP.md` para que restore y validacion usen `whatsapp-scheduler-docker.service`.
+  - Marcado `deploy/systemd/whatsapp-scheduler.service` como unit legacy de referencia y no como camino soportado de rollback inmediato.
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - definir una convencion de tags o checkpoints estables para acelerar rollback Docker-native
+  - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Continuacion 2026-06-17
+
+  - Definida convencion operativa de checkpoints estables para rollback Docker-native.
+  - Documentado en `docs/DEPLOYMENT.md` el formato recomendado de tags anotados: `prod-stable-YYYYMMDD-HHMM`.
+  - Documentada la regla de crear tags solo despues de validacion real en produccion.
+  - Documentado procedimiento de rollback usando `git fetch --tags`, `git checkout <tag>` y reinicio de `whatsapp-scheduler-docker.service`.
+  - Documentada nota operativa sobre `detached HEAD` y vuelta explicita a `main` despues del incidente.
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar
+  - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento

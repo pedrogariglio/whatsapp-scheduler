@@ -179,7 +179,10 @@ sudo ufw status verbose
 
 No abrir `3001/tcp` en interfaces publicas.
 
-## systemd - Servicio Principal
+## systemd - Servicio Host Legacy (deprecado)
+
+Esta seccion queda solo como referencia historica del runtime host original.
+El servicio principal actual en produccion es `whatsapp-scheduler-docker.service`.
 
 Unit file incluido:
 
@@ -187,7 +190,7 @@ Unit file incluido:
 deploy/systemd/whatsapp-scheduler.service
 ```
 
-Copiar y habilitar:
+Solo si se quisiera reconstruir manualmente el runtime host legacy:
 
 ```bash
 sudo cp deploy/systemd/whatsapp-scheduler.service /etc/systemd/system/
@@ -219,9 +222,10 @@ Notas del unit actual:
 - Permite escritura en repo y `STATE_DIR` con `ReadWritePaths`.
 - No usa `NoNewPrivileges=true` por incompatibilidad observada con Chromium via Snap.
 
-## systemd - Servicio Docker
+## systemd - Servicio Principal Actual (Docker)
 
-Este modo evita depender del Chromium Snap del host. La imagen instala Chromium dentro del contenedor y la app usa:
+Este es el modo soportado en produccion.
+Evita depender del Chromium del host: la imagen instala Chromium dentro del contenedor y la app usa:
 
 ```env
 CHROME_BIN=/usr/bin/chromium
@@ -279,7 +283,7 @@ docker compose ps
 curl -i http://10.0.0.1:3001/login.html
 ```
 
-Instalar el unit alternativo:
+Instalar el unit soportado:
 
 ```bash
 sudo systemctl disable --now whatsapp-scheduler.service
@@ -298,11 +302,11 @@ journalctl -u whatsapp-scheduler-docker -n 100 --no-pager
 docker compose logs -n 150 whatsapp-scheduler
 ```
 
-No remover Chromium Snap ni otros snaps del host hasta validar que el contenedor llega a `WhatsApp Web listo para enviar mensajes`, que el panel abre por WireGuard y que un mensaje de prueba queda en `Sent`.
+Una vez validado Docker en produccion, cualquier limpieza adicional del host debe tratarse como hardening separado.
 
-### Runbook seguro de validacion Docker en servidor
+### Runbook historico de migracion desde host a Docker
 
-Orden recomendado, sin reemplazar todavia el servicio host:
+Orden recomendado de la migracion original, sin reemplazar todavia el servicio host:
 
 1. Confirmar estado actual del servicio productivo host.
 2. Confirmar backup reciente de `STATE_DIR`.
@@ -413,14 +417,73 @@ journalctl -u whatsapp-scheduler-docker -n 100 --no-pager
 docker compose logs -n 150 whatsapp-scheduler
 ```
 
-Rollback inmediato si la migracion de `systemd` sale mal:
+Rollback operativo actual del despliegue productivo:
 
 ```bash
-sudo systemctl disable --now whatsapp-scheduler-docker.service
-docker compose down
-sudo systemctl enable --now whatsapp-scheduler.service
-sudo systemctl status whatsapp-scheduler --no-pager
-journalctl -u whatsapp-scheduler -n 150 --no-pager
+cd /home/pedrogariglio/whatsapp-scheduler
+git log --oneline -n 5
+git checkout <commit-o-tag-estable>
+sudo systemctl restart whatsapp-scheduler-docker.service
+journalctl -u whatsapp-scheduler-docker.service -n 100 --no-pager
+docker compose logs -n 150 whatsapp-scheduler
+```
+
+Recomendacion: usar tags o checkpoints conocidos de git para que el rollback sea rapido y repetible.
+No depender de `whatsapp-scheduler.service` como rollback inmediato: el runtime host legacy ya no esta validado ni completo en el servidor actual.
+
+### Convencion de checkpoints estables
+
+Usar tags anotados de git solo para estados realmente validados en produccion.
+
+Formato recomendado:
+
+```text
+prod-stable-YYYYMMDD-HHMM
+```
+
+Ejemplos:
+
+```text
+prod-stable-20260530-2027
+prod-stable-20260617-1820
+```
+
+Regla operativa:
+
+- Crear el tag solo despues de validar como minimo: login, testigo verde, envio correcto y, cuando aplique, reboot controlado.
+- El tag debe apuntar al commit exacto que quedo probado en el servidor.
+- No reutilizar ni mover tags ya publicados localmente o en remoto.
+
+Crear un nuevo checkpoint estable:
+
+```bash
+git tag -a prod-stable-YYYYMMDD-HHMM -m "Production checkpoint after validated deployment"
+git tag --list "prod-stable-*"
+```
+
+Rollback usando un checkpoint estable:
+
+```bash
+cd /home/pedrogariglio/whatsapp-scheduler
+git fetch --tags
+git checkout prod-stable-YYYYMMDD-HHMM
+sudo systemctl restart whatsapp-scheduler-docker.service
+journalctl -u whatsapp-scheduler-docker.service -n 100 --no-pager
+docker compose logs -n 150 whatsapp-scheduler
+```
+
+Despues del rollback, validar:
+
+- panel accesible por WireGuard
+- login correcto
+- testigo verde
+- envio de prueba con estado `Sent`
+
+Importante: `git checkout <tag>` deja el repo en detached HEAD. Para retomar cambios normales despues del incidente, volver a la rama de trabajo explicita:
+
+```bash
+git switch main
+git pull
 ```
 
 ## Backups
@@ -559,8 +622,10 @@ Si no hay sesion autenticada del panel, la app puede devolver `401` por middlewa
 Ver logs:
 
 ```bash
-journalctl -u whatsapp-scheduler -f
-journalctl -u whatsapp-scheduler -n 150 --no-pager
+journalctl -u whatsapp-scheduler-docker.service -f
+journalctl -u whatsapp-scheduler-docker.service -n 150 --no-pager
+cd /home/pedrogariglio/whatsapp-scheduler
+docker compose logs -f whatsapp-scheduler
 ```
 
 Ver backups:
@@ -580,18 +645,17 @@ Actualizar despliegue:
 ```bash
 cd /home/pedrogariglio/whatsapp-scheduler
 git pull
-npm install
-sudo systemctl restart whatsapp-scheduler
+sudo systemctl restart whatsapp-scheduler-docker.service
 ```
 
 Si hubo cambios en unit files:
 
 ```bash
-sudo cp deploy/systemd/whatsapp-scheduler.service /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-docker.service /etc/systemd/system/
 sudo cp deploy/systemd/whatsapp-scheduler-backup.service /etc/systemd/system/
 sudo cp deploy/systemd/whatsapp-scheduler-backup.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl restart whatsapp-scheduler
+sudo systemctl restart whatsapp-scheduler-docker.service
 sudo systemctl restart whatsapp-scheduler-backup.timer
 ```
 
@@ -602,19 +666,19 @@ Procedimiento completo en `docs/BACKUP.md`.
 Resumen:
 
 ```bash
-sudo systemctl stop whatsapp-scheduler
+sudo systemctl stop whatsapp-scheduler-docker.service
 sudo mv /opt/whatsapp-scheduler/state /opt/whatsapp-scheduler/state.before-restore
 sudo mkdir -p /opt/whatsapp-scheduler/state
 sudo tar -xzf /opt/whatsapp-scheduler/backups/whatsapp-scheduler-state-YYYY-MM-DDTHH-MM-SS-msZ.tar.gz -C /opt/whatsapp-scheduler/state
 sudo chown -R pedrogariglio:pedrogariglio /opt/whatsapp-scheduler/state
-sudo systemctl start whatsapp-scheduler
+sudo systemctl start whatsapp-scheduler-docker.service
 ```
 
 Despues del restore, validar panel, WhatsApp `ready`, mensajes pendientes y envio de prueba.
 
 ## Troubleshooting
 
-### Chromium Snap falla al iniciar
+### Chromium Snap falla al iniciar (historico del host legacy)
 
 Sintomas observados:
 
@@ -625,25 +689,25 @@ not a snap cgroup for tag snap.chromium.chromium
 
 Estado actual:
 
-- El problema no bloqueo produccion.
-- El watchdog recupero el cliente y llego a `ready`.
-- Se preparo despliegue Docker para ejecutar Chromium dentro del contenedor y eliminar la dependencia del Snap del host.
+- El problema no bloqueo produccion en su momento.
+- El watchdog del runtime host recupero el cliente y llego a `ready`.
+- El runtime productivo actual ya no usa Chromium del host: Chromium corre dentro del contenedor Docker.
 
-Acciones:
+Acciones si se revisa evidencia historica del servicio host:
 
 ```bash
 journalctl -u whatsapp-scheduler -n 150 --no-pager
 systemctl restart whatsapp-scheduler
 ```
 
-Ruta de hardening recomendada:
+Ruta recomendada para el despliegue actual:
 
 ```bash
-docker compose up -d --build
+sudo systemctl restart whatsapp-scheduler-docker.service
+journalctl -u whatsapp-scheduler-docker.service -n 150 --no-pager
+cd /home/pedrogariglio/whatsapp-scheduler
 docker compose logs -f whatsapp-scheduler
 ```
-
-Si el contenedor queda validado, migrar a `whatsapp-scheduler-docker.service` y recien despues evaluar remover paquetes Snap no requeridos por el servidor headless.
 
 ### WhatsApp queda autenticado pero no llega a ready
 

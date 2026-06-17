@@ -59,7 +59,10 @@
 - [x] Validar reinicio controlado de Docker sin QR nuevo y sin error `profile appears to be in use by another Chromium process`.
 - [x] Migrar `systemd` a Docker solo despues de validar manualmente el contenedor.
 - [x] Dejar preparado rollback inmediato a `whatsapp-scheduler.service` si falla la migracion de `systemd`.
-- [ ] Revisar warning post-reboot de Chromium Snap tras validar migracion Docker: `xdg-settings: not found` y `not a snap cgroup`.
+- [x] Confirmar que el host ya no tenga dependencias operativas del runtime legacy antes de retirar Chromium Snap.
+- [x] Actualizar o retirar el rollback legacy a `whatsapp-scheduler.service`: el unit sigue presente, pero el host ya no tiene binario local de Chromium.
+- [x] Definir una convencion de tags o checkpoints estables para acelerar rollback Docker-native.
+- [ ] Crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
 - [ ] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
@@ -110,5 +113,6 @@
 - [ ] Evaluar cifrado o proteccion adicional para backups que contienen estado sensible.
 
 ## Bloqueos actuales
-- [ ] Validar reboot completo con `whatsapp-scheduler-docker.service` como servicio principal.
-- [ ] Confirmar si ya no quedan dependencias operativas del host legacy antes de retirar Chromium Snap.
+- [x] Validar reboot completo con `whatsapp-scheduler-docker.service` como servicio principal.
+- [x] Confirmar si ya no quedan dependencias operativas del host legacy antes de retirar Chromium Snap.
+- [ ] Resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor.
