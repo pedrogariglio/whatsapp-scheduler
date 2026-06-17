@@ -444,3 +444,21 @@
   - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
   - agregar limites operativos al servicio `systemd` si no afectan Chromium headless
   - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Cierre 2026-06-17
+
+  - Cerrada la etapa de migracion y hardening inicial con Docker como runtime principal, rollback Docker-native documentado y permisos sensibles endurecidos.
+  - Confirmado checkpoint estable publicado `prod-stable-20260530-2027` sobre el ultimo estado productivo validado post-reboot.
+  - Confirmado que el siguiente frente operativo sera la definicion y validacion guiada del procedimiento de rotacion de credenciales del panel.
+  - Acordado cambio de modalidad para la proxima sesion: ejecucion tutorizada, con pasos operativos corridos por el usuario bajo guia del agente.
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - agregar limites operativos al servicio `systemd` si no afectan Chromium headless
+  - definir y validar procedimiento de rotacion de credenciales del panel
+  - definir procedimiento controlado para reenrolar WhatsApp
+
+  Resumen estructurado
+
+  - Ver docs/sessions/session-2026-06-17.md para el cierre documental de la etapa Docker-only, checkpoint estable, hardening de permisos y proximo paso en modo tutor.
