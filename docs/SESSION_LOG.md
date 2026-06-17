@@ -422,3 +422,25 @@
   - crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar
   - asegurar permisos restrictivos sobre STATE_DIR, `.env` y backups
   - definir rotacion de credenciales del panel y procedimiento de reenrolamiento
+
+  Continuacion 2026-06-17 checkpoints y permisos
+
+  - Creado y publicado el primer checkpoint estable `prod-stable-20260530-2027`.
+  - El tag apunta a `b57be0f`, que representa el estado Docker-only validado en produccion despues del reboot real del host.
+  - Publicado ademas el commit documental `bbdeb36` con el runbook Docker-only y el rollback basado en tags estables.
+  - Auditados permisos efectivos en el servidor sobre `.env`, `STATE_DIR` y backups.
+  - Aplicado endurecimiento de permisos:
+      - `.env` en `0600`
+      - `/opt/whatsapp-scheduler`, `STATE_DIR` y `BACKUP_DIR` en `0700`
+      - archivos sensibles del estado en `0600`
+      - subdirectorios sensibles del estado en `0700`
+  - Confirmado que el contenedor sigue leyendo `/state` correctamente tras el cambio de permisos.
+  - Confirmado que el panel sigue respondiendo `200 OK` en `http://10.0.0.1:3001/login.html`.
+  - Validado backup manual posterior al hardening usando el mismo `PATH` de `nvm` del unit file.
+  - Confirmado backup generado `whatsapp-scheduler-state-2026-06-17T21-31-51-896Z.tar.gz` con archivo y checksum en `0600`.
+
+  Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - agregar limites operativos al servicio `systemd` si no afectan Chromium headless
+  - definir rotacion de credenciales del panel y procedimiento de reenrolamiento

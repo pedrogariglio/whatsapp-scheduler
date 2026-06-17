@@ -45,7 +45,7 @@
 - [x] Habilitar y validar backups periodicos de `STATE_DIR` en el servidor.
 - [x] Definir retencion de backups y politica de rotacion.
 - [x] Probar restauracion de backup en un directorio limpio antes de considerarlo confiable.
-- [ ] Asegurar permisos restrictivos sobre `STATE_DIR`, `.env` y backups.
+- [x] Asegurar permisos restrictivos sobre `STATE_DIR`, `.env` y backups.
 - [ ] Confirmar que `ALLOW_LOCAL_WEB_SETUP=false` en produccion.
 - [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
 - [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
@@ -62,7 +62,7 @@
 - [x] Confirmar que el host ya no tenga dependencias operativas del runtime legacy antes de retirar Chromium Snap.
 - [x] Actualizar o retirar el rollback legacy a `whatsapp-scheduler.service`: el unit sigue presente, pero el host ya no tiene binario local de Chromium.
 - [x] Definir una convencion de tags o checkpoints estables para acelerar rollback Docker-native.
-- [ ] Crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar.
+- [x] Crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [ ] Definir procedimiento de rotacion de credenciales del panel.
 - [ ] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
