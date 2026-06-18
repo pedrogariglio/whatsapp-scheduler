@@ -462,3 +462,45 @@
   Resumen estructurado
 
   - Ver docs/sessions/session-2026-06-17.md para el cierre documental de la etapa Docker-only, checkpoint estable, hardening de permisos y proximo paso en modo tutor.
+
+ Continuacion 2026-06-18 rotacion de credenciales (modo tutor)
+
+  - Retomada la operacion desde el checkpoint estable `prod-stable-20260530-2027` en modalidad tutorizada paso a paso.
+  - Confirmado runtime productivo en `WorkingDirectory=/home/pedrogariglio/whatsapp-scheduler` usando `docker compose`.
+  - Confirmado estado de autenticacion previo:
+      - `auth.username` presente
+      - `auth.passwordHash` presente
+      - `firstRun=false`
+      - `ALLOW_LOCAL_WEB_SETUP=false`
+      - `SESSION_SECRET_LEN=64`
+  - Validado por codigo y por prueba operativa que la rotacion normal de credenciales no requiere reinicio.
+  - Ejecutada rotacion normal con `docker compose exec whatsapp-scheduler npm run setup-admin`.
+  - Verificado cambio efectivo de credenciales comparando fingerprint SHA-256 del `passwordHash` antes y despues.
+  - Validado login exitoso con credenciales nuevas y acceso autenticado a `/health`.
+  - Validada rotacion forzada:
+      - reinicio de contenedor posterior a `setup-admin`
+      - cookie previa invalidada con `401 Unauthorized`
+      - re-login exitoso con credenciales nuevas (`HTTP=200`)
+  - Durante la rotacion forzada se invalido la sesion de WhatsApp y aparecio loop de QR.
+  - Se observo `Cliente desconectado: LOGOUT` y fallo puntual al borrar `/state/.wwebjs_auth` desde la app.
+  - Ejecutada recuperacion operativa controlada:
+      - stop del contenedor
+      - borrado manual de `/opt/whatsapp-scheduler/state/.wwebjs_auth`
+      - arranque nuevamente del contenedor
+      - reenrolamiento por QR desde el telefono
+  - Confirmado estado final post-recuperacion:
+      - `Autenticado correctamente. Sesion guardada.`
+      - `WhatsApp Web listo para enviar mensajes.`
+      - `HEALTH_FINAL {"ok":true,"whatsappReady":true}` con `HTTP=200`
+  - Verificado que en los ultimos 10 minutos no aparecieron nuevamente señales de `LOGOUT`, `auth_failure` ni errores de borrado de `.wwebjs_auth`.
+
+ Pendiente actualizado
+
+  - resolver el headless boot issue del HP EliteDesk para permitir reboots remotos seguros sin monitor
+  - agregar limites operativos al servicio `systemd` si no afectan Chromium headless
+  - verificar que archivos de uploads no queden persistidos tras fallos inesperados
+  - definir chequeo simple de salud y monitoreo operativo minimo
+
+ Resumen estructurado
+
+  - Ver docs/sessions/session-2026-06-18.md para el runbook validado de rotacion normal y forzada de credenciales, mas la recuperacion controlada de reenrolamiento WhatsApp.

@@ -64,8 +64,8 @@
 - [x] Definir una convencion de tags o checkpoints estables para acelerar rollback Docker-native.
 - [x] Crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
-- [ ] Definir y validar procedimiento de rotacion de credenciales del panel.
-- [ ] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
+- [x] Definir y validar procedimiento de rotacion de credenciales del panel.
+- [x] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
 - [ ] Verificar que archivos de uploads no queden persistidos tras fallos inesperados.
 
 ## Backups
