@@ -84,6 +84,7 @@ let isInitializing = false;
 let readyTimeout = null;
 let reinitTimeout = null;
 let stallRetryCount = 0;
+let restartRequested = false;
 
 // Cache de contactos en memoria — inicializar desde disco
 let contactsCache = loadContactsCacheFromDisk();
@@ -130,19 +131,19 @@ function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
   if (reinitTimeout) return;
 
   clearReadyTimeout();
-  reinitTimeout = setTimeout(async () => {
+  reinitTimeout = setTimeout(() => {
     reinitTimeout = null;
-    console.log(`🔄 Reinicializando cliente WhatsApp (${reason})...`);
+    if (restartRequested) return;
 
-    try {
-      await client.destroy();
-    } catch (error) {
-      console.warn('⚠️  Error al destruir cliente antes de reinicializar:', error.message);
-    }
-
+    restartRequested = true;
     isReady = false;
     isInitializing = false;
-    initializeClient();
+    console.error(`🔄 Reiniciando proceso del contenedor (${reason})...`);
+
+    // Reinitializing the same whatsapp-web.js Client after destroy() can leave
+    // Puppeteer page bindings behind (for example onQRChangedEvent). A fresh
+    // Node process guarantees a fresh Client and Chromium page instead.
+    setTimeout(() => process.exit(1), 100);
   }, delayMs);
 }
 
