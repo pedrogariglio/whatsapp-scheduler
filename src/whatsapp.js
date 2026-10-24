@@ -316,6 +316,7 @@ async function initializeClient() {
       scheduleReinitialize('execution-context-destroyed', 5000);
     } else {
       console.error('❌ Error iniciando cliente WhatsApp:', err.message);
+      console.error(err.stack || err);
       scheduleReinitialize('initialize-error');
     }
   }
