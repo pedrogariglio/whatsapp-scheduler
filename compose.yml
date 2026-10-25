@@ -13,8 +13,8 @@ services:
       PORT: 3001
       STATE_DIR: /state
       CHROME_BIN: /usr/bin/chromium
-      WA_WEB_VERSION: 2.3000.1040051030-alpha
-      WA_WEB_CACHE_REMOTE_PATH: https://unpkg.com/@wppconnect/wa-version@1.5.3995/html/{version}.html
+      WA_WEB_VERSION: 2.3000.1014921616-alpha
+      WA_WEB_CACHE_REMOTE_PATH: https://unpkg.com/@wppconnect/wa-version@1.5.323/html/{version}.html
     ports:
       - "${PANEL_BIND:-0.0.0.0}:${PORT:-3001}:3001"
     volumes:
