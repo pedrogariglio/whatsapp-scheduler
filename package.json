@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "postinstall": "node scripts/patch-whatsapp-web.js",
     "dev": "nodemon --ignore data/ --ignore .wwebjs_auth/ src/index.js",
     "setup-admin": "node scripts/setup-admin.js",
     "backup:state": "node scripts/backup-state.js"

@@ -32,6 +32,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package*.json ./
+COPY scripts/patch-whatsapp-web.js ./scripts/patch-whatsapp-web.js
 RUN npm ci --omit=dev
 
 COPY . .
