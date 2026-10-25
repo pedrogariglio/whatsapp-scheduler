@@ -317,6 +317,12 @@ async function initializeClient() {
     } else {
       console.error('❌ Error iniciando cliente WhatsApp:', err.message);
       console.error(err.stack || err);
+      try {
+        const webVersion = await client.getWWebVersion();
+        console.error(`ℹ️  WhatsApp Web cargado: ${webVersion}`);
+      } catch (versionErr) {
+        console.error('ℹ️  No se pudo obtener la versión de WhatsApp Web:', versionErr.message);
+      }
       scheduleReinitialize('initialize-error');
     }
   }
