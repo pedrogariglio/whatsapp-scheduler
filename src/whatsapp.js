@@ -9,6 +9,8 @@ const { stateDir } = require('./config');
 const CONTACTS_CACHE_PATH = path.join(stateDir, 'data', 'contacts-cache.json');
 const AUTH_PATH = path.join(stateDir, '.wwebjs_auth');
 const CHROME_BIN = process.env.CHROME_BIN;
+const WA_WEB_VERSION = process.env.WA_WEB_VERSION;
+const WA_WEB_CACHE_REMOTE_PATH = process.env.WA_WEB_CACHE_REMOTE_PATH;
 const READY_TIMEOUT_MS = 90 * 1000;
 const REINIT_DELAY_MS = 10 * 1000;
 const MAX_STALL_RETRIES = 3;
@@ -57,7 +59,19 @@ function saveContactsCacheToDisk(contacts) {
 }
 
 // LocalAuth guarda la sesión en .wwebjs_auth/
+const webVersionOptions = WA_WEB_VERSION
+  ? {
+      webVersion: WA_WEB_VERSION,
+      webVersionCache: {
+        type: 'remote',
+        remotePath: WA_WEB_CACHE_REMOTE_PATH,
+        strict: true,
+      },
+    }
+  : {};
+
 const client = new Client({
+  ...webVersionOptions,
   authStrategy: new LocalAuth({
     dataPath: AUTH_PATH,
   }),
