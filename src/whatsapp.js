@@ -68,7 +68,7 @@ const webVersionOptions = WA_WEB_VERSION
         strict: true,
       },
     }
-  : {};
+  : { webVersionCache: { type: 'none' } };
 
 const client = new Client({
   ...webVersionOptions,
@@ -90,6 +90,19 @@ const client = new Client({
     ],
   },
 });
+
+const originalInitWebVersionCache = client.initWebVersionCache.bind(client);
+client.initWebVersionCache = async function initWebVersionCacheFresh() {
+  if (this.pupPage) {
+    await this.pupPage.setBypassServiceWorker(true).catch((err) => {
+      console.warn('⚠️  No se pudo desactivar el service worker:', err.message);
+    });
+    await this.pupPage.setCacheEnabled(false).catch((err) => {
+      console.warn('⚠️  No se pudo desactivar la caché HTTP:', err.message);
+    });
+  }
+  return originalInitWebVersionCache();
+};
 
 let isReady = false;
 let ownerNumber = null;
