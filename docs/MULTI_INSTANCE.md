@@ -1,5 +1,7 @@
 # Multi-instance deployment
 
+Ver tambien `docs/ROADMAP.md` para las fases de red, Proxmox y acceso por WireGuard.
+
 ## Decision
 
 Para que otra persona use la aplicacion, el modelo elegido es **una instancia aislada por persona**.

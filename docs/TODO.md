@@ -118,6 +118,8 @@
 - [x] Definir modelo de una instancia aislada por persona.
 - [x] Parametrizar `compose.yml` con `COMPOSE_PROJECT_NAME`, `INSTANCE_NAME`, `STATE_DIR_HOST` y `ENV_FILE`.
 - [x] Documentar alta de una instancia nueva en `docs/MULTI_INSTANCE.md`.
+- [x] Documentar roadmap detallado de red, acceso, Proxmox y fases en `docs/ROADMAP.md`.
+- [ ] Definir si la segunda persona accede por puerto directo sobre WireGuard o por reverse proxy interno.
 - [ ] Crear plantilla de `.env.<nombre>`.
 - [ ] Parametrizar o duplicar units de backup y health por instancia.
 - [ ] Definir reverse proxy interno con TLS.
