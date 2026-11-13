@@ -114,27 +114,56 @@ if (storeSource.includes(storeMarker)) {
 }
 
 const utilsTarget = path.join(injectedDir, 'Utils.js');
-const utilsMarker = 'whatsapp-scheduler: resolve LID contacts to phone numbers';
 
 if (!fs.existsSync(utilsTarget)) {
   throw new Error(`No se encontró el archivo de whatsapp-web.js: ${utilsTarget}`);
 }
 
 let utilsSource = fs.readFileSync(utilsTarget, 'utf8');
-if (utilsSource.includes(utilsMarker)) {
-  process.stdout.write('whatsapp-web.js Utils ya parcheado.\n');
+let utilsChanged = false;
+
+const lidMarker = 'whatsapp-scheduler: resolve LID contacts to phone numbers';
+if (utilsSource.includes(lidMarker)) {
+  process.stdout.write('whatsapp-web.js Utils ya resuelve LID a teléfono.\n');
 } else {
   const original = '        res.userid = window.Store.ContactMethods.getUserid(contact);';
-  const replacement = `        // ${utilsMarker}
+  const replacement = `        // ${lidMarker}
         res.userid = (contact.id && contact.id.server === 'lid' && contact.phoneNumber && contact.phoneNumber.user)
             ? contact.phoneNumber.user
             : window.Store.ContactMethods.getUserid(contact);`;
 
   if (!utilsSource.includes(original)) {
-    throw new Error('La estructura esperada de Utils.js cambió; no se aplica el parche.');
+    throw new Error('La estructura esperada de Utils.js cambió; no se aplica el parche de LID.');
   }
 
   utilsSource = utilsSource.replace(original, replacement);
-  fs.writeFileSync(utilsTarget, utilsSource);
+  utilsChanged = true;
   process.stdout.write('whatsapp-web.js Utils parcheado para resolver LID a teléfono.\n');
+}
+
+const mediaMarker = 'whatsapp-scheduler: drop media __x_id before Msg construction';
+if (utilsSource.includes(mediaMarker)) {
+  process.stdout.write('whatsapp-web.js Utils ya descarta __x_id de media.\n');
+} else {
+  const original = `        // Bot's won't reply if canonicalUrl is set (linking)
+        if (botOptions) {`;
+  const replacement = `        // ${mediaMarker}
+        if (message.__x_id) {
+            delete message.__x_id;
+        }
+
+        // Bot's won't reply if canonicalUrl is set (linking)
+        if (botOptions) {`;
+
+  if (!utilsSource.includes(original)) {
+    throw new Error('La estructura esperada de Utils.js cambió; no se aplica el parche de media.');
+  }
+
+  utilsSource = utilsSource.replace(original, replacement);
+  utilsChanged = true;
+  process.stdout.write('whatsapp-web.js Utils parcheado para descartar __x_id de media.\n');
+}
+
+if (utilsChanged) {
+  fs.writeFileSync(utilsTarget, utilsSource);
 }

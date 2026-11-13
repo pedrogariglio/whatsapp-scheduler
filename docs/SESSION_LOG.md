@@ -534,6 +534,8 @@
   - Agregada limpieza de uploads huerfanos al iniciar, con 3 tests nuevos (total 14).
   - Agregados templates systemd `whatsapp-scheduler-backup@` y `whatsapp-scheduler-health@` para instancias adicionales.
   - `check-health` ahora deriva la URL desde `PANEL_BIND` y `PORT` de cada `.env.<nombre>`.
+  - Diagnosticado fallo de envio con adjunto: `__x_id` de `mediaOptions` colisionaba con el `id` interno del `Msg`.
+  - Aplicado backport del fix upstream de whatsapp-web.js v1.34.8 en `scripts/patch-whatsapp-web.js`.
 
  Pendiente actualizado
 
@@ -544,6 +546,7 @@
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
   - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes
+  - validar en produccion un envio real con adjunto despues del backport
 
  Resumen estructurado
 
