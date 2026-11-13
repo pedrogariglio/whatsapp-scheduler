@@ -114,6 +114,18 @@
 - [ ] Revisar cobertura de pruebas para manejo de uploads y limpieza de adjuntos.
 - [ ] Revisar cobertura de pruebas para bot en chat propio y comandos explicitos.
 
+## Multi-instancia / crecimiento
+- [x] Definir modelo de una instancia aislada por persona.
+- [x] Parametrizar `compose.yml` con `COMPOSE_PROJECT_NAME`, `INSTANCE_NAME`, `STATE_DIR_HOST` y `ENV_FILE`.
+- [x] Documentar alta de una instancia nueva en `docs/MULTI_INSTANCE.md`.
+- [ ] Crear plantilla de `.env.<nombre>`.
+- [ ] Parametrizar o duplicar units de backup y health por instancia.
+- [ ] Definir reverse proxy interno con TLS.
+- [ ] Definir VLANs en el switch L2.
+- [ ] Evaluar migracion de instancias a Proxmox.
+- [ ] Definir limites de memoria por instancia.
+- [ ] Definir procedimiento de alta/baja de una persona.
+
 ## Investigacion futura
 - [ ] Evaluar migracion de `sql.js` a `better-sqlite3`.
 - [ ] Evaluar alternativas a Chromium via Snap para reducir incompatibilidades con `systemd`.

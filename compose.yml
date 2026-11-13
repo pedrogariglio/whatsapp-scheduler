@@ -1,13 +1,15 @@
+name: ${COMPOSE_PROJECT_NAME:-whatsapp-scheduler}
+
 services:
   whatsapp-scheduler:
     build:
       context: .
     image: whatsapp-scheduler:local
-    container_name: whatsapp-scheduler
-    hostname: whatsapp-scheduler
+    container_name: ${INSTANCE_NAME:-whatsapp-scheduler}
+    hostname: ${INSTANCE_NAME:-whatsapp-scheduler}
     restart: unless-stopped
     env_file:
-      - .env
+      - ${ENV_FILE:-.env}
     environment:
       HOST: 0.0.0.0
       PORT: 3001
@@ -16,7 +18,7 @@ services:
     ports:
       - "${PANEL_BIND:-0.0.0.0}:${PORT:-3001}:3001"
     volumes:
-      - /opt/whatsapp-scheduler/state:/state
+      - ${STATE_DIR_HOST:-/opt/whatsapp-scheduler/state}:/state
     shm_size: "512mb"
     security_opt:
       - no-new-privileges:true
