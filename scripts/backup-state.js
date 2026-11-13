@@ -152,6 +152,7 @@ async function main() {
     '--exclude=.vscode',
     '--exclude=.idea',
     '--exclude=.wwebjs_cache',
+    '--exclude=.wwebjs_auth.bak-*',
     '--exclude=backups',
     '--exclude=*.tar',
     '--exclude=*.tar.gz',
