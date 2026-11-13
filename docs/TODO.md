@@ -31,6 +31,10 @@
 - [x] Respuestas del bot restringidas a comandos explicitos en chat propio.
 - [x] Flujo funcional validado: login, testigo verde, envio programado y UI en estado `Sent`.
 - [x] Backup manual de `STATE_DIR` creado y verificado.
+- [x] Warning de actualizacion de contactos investigado: `getChats()` descartado por error minificado.
+- [x] Cache de contactos reconstruido solo con contactos guardados, LIDs resueltos y deduplicacion por telefono.
+- [x] Nombres guardados priorizados sobre pushname en el buscador del panel.
+- [x] Backup legacy de auth excluido de los backups periodicos.
 
 ## Proximos pasos inmediatos
 - [x] Ejecutar reboot completo del servidor Ubuntu y validar recuperacion end-to-end.
@@ -82,6 +86,8 @@
 - [x] Documentar comando de restore y orden de parada/arranque del servicio.
 - [x] Aplicar rotacion automatica con `BACKUP_RETENTION_DAYS=30` y `BACKUP_RETENTION_MIN_COUNT=7`.
 - [x] Validar restore en directorio limpio con checksum OK y comparacion de archivos restaurados.
+- [x] Excluir `.wwebjs_auth.bak-*` de los backups periodicos mientras se conserva la copia manual.
+- [ ] Confirmar en el proximo backup periodico que no se incluya `.wwebjs_auth.bak-*`.
 
 ## Monitoreo
 - [ ] Definir chequeo simple de salud HTTP para el panel/API.
@@ -109,6 +115,8 @@
 - [ ] Investigar estrategia de monitoreo liviana compatible con servidor headless.
 - [ ] Investigar limites y comportamiento de `whatsapp-web.js` ante sesiones largas.
 - [ ] Evaluar estrategia para detectar y recuperar desconexiones silenciosas de WhatsApp Web.
+- [ ] Investigar stalls intermitentes `authenticated` -> `ready` en WhatsApp Web y evaluar mitigacion adicional.
+- [ ] Revisar warning de `MemoryStore` de `express-session` y evaluar store persistente.
 - [ ] Evaluar empaquetado o instalador Linux para reducir pasos manuales de despliegue.
 - [ ] Evaluar cifrado o proteccion adicional para backups que contienen estado sensible.
 

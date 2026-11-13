@@ -504,3 +504,36 @@
  Resumen estructurado
 
   - Ver docs/sessions/session-2026-06-18.md para el runbook validado de rotacion normal y forzada de credenciales, mas la recuperacion controlada de reenrolamiento WhatsApp.
+
+ Continuacion 2026-11-13 contactos y cache
+
+  - WhatsApp Web actualizado a `2.3000.1054468000`; se investigo el warning `No se pudo actualizar contactos: r`.
+  - Confirmado que el error minificado `r` venia de `client.getChats()`, no de `getContacts()`.
+  - Eliminado `getChats()` del refresh de contactos; la fuente valida es `getContacts()`.
+  - Reconstruido el cache desde datos frescos, sin sembrarlo con el cache viejo en disco.
+  - Incluidos solo contactos guardados (`isMyContact=true`), deduplicados por telefono.
+  - Resueltos contactos LID a telefono real mediante parche en `getContactModel` de whatsapp-web.js.
+  - Corregida la seleccion de nombre: ahora prioriza nombre guardado sobre pushname.
+  - Agregados 11 tests con `node --test` para el merge de contactos.
+  - Excluido `.wwebjs_auth.bak-*` de los backups periodicos.
+  - Diagnostico de inicializacion de WhatsApp dejado detras de `WA_DEBUG=true`.
+  - Validado en produccion:
+      - ready sin QR
+      - refresh final de 120 contactos guardados desde 1412 crudos
+      - 0 LIDs sin resolver
+      - busqueda de contactos sin repetidos
+      - contacto guardado como `Meli` mostrado correctamente
+      - envio programado con estado `Sent`
+  - Observado un stall intermitente `authenticated` -> `ready` en un arranque; el watchdog recupero el servicio y arranques posteriores llegaron a ready en el primer intento.
+
+ Pendiente actualizado
+
+  - investigar stalls intermitentes `authenticated` -> `ready`
+  - mantener `.wwebjs_auth.bak-*` unos dias mas antes de eliminarlo
+  - confirmar que el proximo backup periodico no incluya el backup legacy de auth
+  - revisar warning de `MemoryStore` de `express-session`
+  - definir monitoreo real de `/health` con autenticacion o endpoint interno
+
+ Resumen estructurado
+
+  - Ver docs/sessions/session-2026-11-13.md para el diagnostico y fix del cache de contactos, resolucion de LID, nombres guardados y validacion de envio programado.
