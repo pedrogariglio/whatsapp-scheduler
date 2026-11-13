@@ -84,8 +84,31 @@ if (storeSource.includes(storeMarker)) {
     throw new Error('La estructura esperada de Store.js cambió; no se aplica el parche.');
   }
 
+  const optionalModules = [
+    'WAWebBizGatingUtils',
+    'WAWebSetPushnameConnAction',
+    'WAPhoneUtils',
+    'WAPhoneFindCC',
+    'WAWebChatForwardMessage',
+    'WAWebGenerateEventCallLink',
+    'WAWebSendEventEditMsgAction',
+    'WAWebGroupCreateJob',
+    'WAWebGroupModifyInfoJob',
+    'WAWebGroupInviteJob',
+    'WAWebGroupInviteV4Job',
+    'WAWebMexFetchGroupInviteCodeJob',
+    'WAWebChangeNewsletterOwnerAction',
+    'WAWebDemoteNewsletterAdminAction',
+    'WAWebNewsletterDemoteAdminJob',
+    'WAWebMexFetchNewsletterSubscribersJob',
+    'WAWebNewsletterSubscriberListAction',
+    'WAWebRevokeStatusAction'
+  ];
+
   storeSource = storeSource.replace(original, replacement);
-  storeSource = storeSource.replace(/window\.require\(/g, 'safeRequire(');
+  for (const name of optionalModules) {
+    storeSource = storeSource.split(`window.require('${name}')`).join(`safeRequire('${name}')`);
+  }
   fs.writeFileSync(storeTarget, storeSource);
   process.stdout.write('whatsapp-web.js Store parcheado para tolerar módulos diferidos.\n');
 }
