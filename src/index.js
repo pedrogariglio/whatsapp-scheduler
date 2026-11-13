@@ -9,7 +9,8 @@ const path = require('path');
 const { startScheduler } = require('./scheduler');
 const messagesRouter = require('./routes/messages');
 const { hashPassword, verifyPassword } = require('./auth');
-const { ensureConfig, getConfig, saveConfig, hasConfiguredAdmin } = require('./config');
+const { ensureConfig, getConfig, saveConfig, hasConfiguredAdmin, stateDir } = require('./config');
+const { cleanupOrphanUploads } = require('./uploads');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -204,8 +205,16 @@ app.use((req, res) => {
 });
 
 // Init
-const { initDB } = require('./db');
+const { initDB, getAllMessages } = require('./db');
 initDB().then(() => {
+  const { removed } = cleanupOrphanUploads(
+    path.join(stateDir, 'uploads'),
+    getAllMessages(),
+  );
+  if (removed.length > 0) {
+    console.log(`🧹 ${removed.length} adjunto(s) huerfano(s) eliminado(s) de uploads.`);
+  }
+
   app.listen(PORT, HOST, () => {
     console.log(`\n🚀 Servidor corriendo en http://${HOST}:${PORT}`);
     console.log(`   Health check: http://${HOST}:${PORT}/health\n`);

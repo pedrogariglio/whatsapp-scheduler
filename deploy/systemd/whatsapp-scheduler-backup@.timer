@@ -1,0 +1,11 @@
+[Unit]
+Description=Run WhatsApp Scheduler state backup daily (%i)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=whatsapp-scheduler-backup@%i.service
+
+[Install]
+WantedBy=timers.target

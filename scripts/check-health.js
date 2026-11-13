@@ -12,8 +12,9 @@ const stateDir = process.env.STATE_DIR
 const stateFile = process.env.HEALTH_STATE_FILE
   ? path.resolve(process.env.HEALTH_STATE_FILE)
   : path.join(stateDir, 'data', 'health-monitor-state.json');
+const healthHost = resolveHealthHost();
 const healthUrl = process.env.HEALTH_URL
-  || `http://127.0.0.1:${process.env.PORT || 3001}/internal/health`;
+  || `http://${healthHost}:${process.env.PORT || 3001}/internal/health`;
 const healthToken = process.env.HEALTH_TOKEN;
 const alertWebhookUrl = process.env.ALERT_WEBHOOK_URL;
 const failureThreshold = parsePositiveInteger(process.env.HEALTH_FAILURE_THRESHOLD, 2);
@@ -21,6 +22,15 @@ const alertCooldownSeconds = parseNonNegativeInteger(process.env.HEALTH_ALERT_CO
 const startupGraceSeconds = parseNonNegativeInteger(process.env.HEALTH_STARTUP_GRACE_SECONDS, 180);
 const timeoutMs = parsePositiveInteger(process.env.HEALTH_TIMEOUT_MS, 10000);
 const alertOnStall = process.env.HEALTH_ALERT_ON_STALL !== 'false';
+
+function resolveHealthHost() {
+  if (process.env.HEALTH_HOST) return process.env.HEALTH_HOST;
+
+  const panelBind = process.env.PANEL_BIND;
+  if (!panelBind || panelBind === '0.0.0.0') return '127.0.0.1';
+  if (panelBind === '::') return '::1';
+  return panelBind;
+}
 
 function parsePositiveInteger(value, fallback) {
   const parsed = Number(value);

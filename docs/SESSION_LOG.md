@@ -531,6 +531,9 @@
   - Agregados unit files `whatsapp-scheduler-health.service` y `.timer` cada 2 minutos.
   - Configurado `HEALTH_TOKEN` en produccion y validado `GET /internal/health` con `HTTP=200` y `whatsappReady=true`.
   - Instalado y habilitado el timer; el chequeo manual termino con `status=0/SUCCESS` y log `[health] OK ready=true ... stalls=0`.
+  - Agregada limpieza de uploads huerfanos al iniciar, con 3 tests nuevos (total 14).
+  - Agregados templates systemd `whatsapp-scheduler-backup@` y `whatsapp-scheduler-health@` para instancias adicionales.
+  - `check-health` ahora deriva la URL desde `PANEL_BIND` y `PORT` de cada `.env.<nombre>`.
 
  Pendiente actualizado
 
@@ -540,6 +543,7 @@
   - revisar warning de `MemoryStore` de `express-session`
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
+  - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes
 
  Resumen estructurado
 

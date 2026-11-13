@@ -111,21 +111,34 @@ curl -H "X-Health-Token: <token>" \
 
 ## Backups por instancia
 
-El unit actual de backup apunta a la instancia principal. Para una instancia nueva, duplicar los units con otro nombre y ajustar:
+La instancia principal sigue usando `whatsapp-scheduler-backup.service` y `.timer`. Para instancias adicionales usar los templates:
 
-- `EnvironmentFile=/home/pedrogariglio/whatsapp-scheduler/.env.<nombre>`
-- `Environment=BACKUP_DIR=/opt/whatsapp-scheduler/<nombre>/backups`
-- `ReadWritePaths=/opt/whatsapp-scheduler/<nombre>/state /opt/whatsapp-scheduler/<nombre>/backups`
+```bash
+sudo cp deploy/systemd/whatsapp-scheduler-backup@.service /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-backup@.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler-backup@<nombre>.timer
+```
+
+El template espera:
+
+- `.env.<nombre>` con `STATE_DIR=/opt/whatsapp-scheduler/<nombre>/state`
+- backups en `/opt/whatsapp-scheduler/<nombre>/backups`
 
 No mezclar backups entre instancias.
 
 ## Monitoreo por instancia
 
-Duplicar `whatsapp-scheduler-health.service` y `.timer` con otro nombre y ajustar:
+Para instancias adicionales usar los templates:
 
-- `EnvironmentFile=/home/pedrogariglio/whatsapp-scheduler/.env.<nombre>`
-- `Environment=HEALTH_URL=http://10.0.0.1:3002/internal/health`
-- `ReadWritePaths=/opt/whatsapp-scheduler/<nombre>/state`
+```bash
+sudo cp deploy/systemd/whatsapp-scheduler-health@.service /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-health@.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler-health@<nombre>.timer
+```
+
+El script `check-health` arma la URL usando `PANEL_BIND` y `PORT` de `.env.<nombre>`. Si hace falta, se puede forzar con `HEALTH_URL`.
 
 Cada instancia debe tener su propio `HEALTH_TOKEN` y su propio archivo `health-monitor-state.json` dentro de su `STATE_DIR`.
 

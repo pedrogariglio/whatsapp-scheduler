@@ -70,7 +70,8 @@
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [x] Definir y validar procedimiento de rotacion de credenciales del panel.
 - [x] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
-- [ ] Verificar que archivos de uploads no queden persistidos tras fallos inesperados.
+- [x] Implementar limpieza de uploads huerfanos al iniciar.
+- [ ] Verificar en produccion que la limpieza no borre adjuntos pendientes.
 
 ## Backups
 - [x] Backup manual de `STATE_DIR` validado.
@@ -111,7 +112,7 @@
 - [ ] Mejorar visibilidad en UI/API para mensajes `pending`, `retry`, `sent` y `failed`.
 - [ ] Agregar endpoint o vista de salud operacional.
 - [ ] Revisar cobertura de pruebas para scheduler resiliente y reintentos persistidos.
-- [ ] Revisar cobertura de pruebas para manejo de uploads y limpieza de adjuntos.
+- [x] Agregar cobertura de pruebas para limpieza de uploads huerfanos.
 - [ ] Revisar cobertura de pruebas para bot en chat propio y comandos explicitos.
 
 ## Multi-instancia / crecimiento
@@ -121,7 +122,7 @@
 - [x] Documentar roadmap detallado de red, acceso, Proxmox y fases en `docs/ROADMAP.md`.
 - [ ] Definir si la segunda persona accede por puerto directo sobre WireGuard o por reverse proxy interno.
 - [ ] Crear plantilla de `.env.<nombre>`.
-- [ ] Parametrizar o duplicar units de backup y health por instancia.
+- [x] Agregar templates systemd `@` para backup y health por instancia.
 - [ ] Definir reverse proxy interno con TLS.
 - [ ] Definir VLANs en el switch L2.
 - [ ] Evaluar migracion de instancias a Proxmox.
