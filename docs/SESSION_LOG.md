@@ -525,6 +525,12 @@
       - contacto guardado como `Meli` mostrado correctamente
       - envio programado con estado `Sent`
   - Observado un stall intermitente `authenticated` -> `ready` en un arranque; el watchdog recupero el servicio y arranques posteriores llegaron a ready en el primer intento.
+  - Agregado endpoint interno `GET /internal/health` autenticado por `HEALTH_TOKEN`, sin depender de sesion del panel.
+  - Agregado script `npm run check-health` con deteccion de stalls, `ready=false`, reinicios y cooldown de alertas.
+  - Agregado webhook opcional `ALERT_WEBHOOK_URL` compatible con Slack/Discord y journal como alerta base.
+  - Agregados unit files `whatsapp-scheduler-health.service` y `.timer` cada 2 minutos.
+  - Configurado `HEALTH_TOKEN` en produccion y validado `GET /internal/health` con `HTTP=200` y `whatsappReady=true`.
+  - Instalado y habilitado el timer; el chequeo manual termino con `status=0/SUCCESS` y log `[health] OK ready=true ... stalls=0`.
 
  Pendiente actualizado
 
@@ -532,8 +538,9 @@
   - mantener `.wwebjs_auth.bak-*` unos dias mas antes de eliminarlo
   - confirmar que el proximo backup periodico no incluya el backup legacy de auth
   - revisar warning de `MemoryStore` de `express-session`
-  - definir monitoreo real de `/health` con autenticacion o endpoint interno
+  - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
+  - verificar una alerta real ante `whatsappReady=false` o un stall
 
  Resumen estructurado
 
-  - Ver docs/sessions/session-2026-11-13.md para el diagnostico y fix del cache de contactos, resolucion de LID, nombres guardados y validacion de envio programado.
+  - Ver docs/sessions/session-2026-11-13.md para el diagnostico y fix del cache de contactos, resolucion de LID, nombres guardados, validacion de envio programado y monitoreo interno de salud.
