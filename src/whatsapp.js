@@ -174,6 +174,51 @@ function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
   }, delayMs);
 }
 
+let diagnosticsAttached = false;
+function attachPageDiagnostics() {
+  const page = client.pupPage;
+  if (!page || diagnosticsAttached) return;
+  diagnosticsAttached = true;
+
+  page.on('console', (msg) => {
+    const type = msg.type();
+    if (type === 'error' || (process.env.WA_DEBUG === 'true' && type === 'warning')) {
+      console.warn(`🖥️  [WhatsApp ${type}] ${msg.text()}`);
+    }
+  });
+
+  page.on('pageerror', (err) => {
+    console.error('🖥️  [WhatsApp pageerror]', describeError(err));
+  });
+
+  const snapshot = async (label) => {
+    try {
+      const state = await page.evaluate(() => {
+        const appState = window.AuthStore && window.AuthStore.AppState;
+        return {
+          version: (typeof window.Debug !== 'undefined' && window.Debug.VERSION) || null,
+          appState: appState
+            ? (typeof appState.state === 'function' ? 'function' : appState.state)
+            : null,
+          hasSynced: appState
+            ? (typeof appState.hasSynced === 'function' ? 'function' : appState.hasSynced)
+            : null,
+          hasStore: typeof window.Store !== 'undefined',
+          storeKeys: typeof window.Store !== 'undefined' ? Object.keys(window.Store).length : 0,
+          hasWWebJS: typeof window.WWebJS !== 'undefined',
+          hasConn: Boolean(appState && window.AuthStore.Conn),
+        };
+      });
+      console.log(`🩺 WhatsApp estado (${label}):`, JSON.stringify(state));
+    } catch (err) {
+      console.warn(`⚠️  No se pudo leer el diagnóstico de WhatsApp (${label}):`, describeError(err));
+    }
+  };
+
+  setTimeout(() => snapshot('10s'), 10000);
+  setTimeout(() => snapshot('40s'), 40000);
+}
+
 client.on('qr', (qr) => {
   console.log('\n📱 Escaneá este QR con WhatsApp en tu celular:\n');
   qrcode.generate(qr, { small: true });
@@ -182,6 +227,7 @@ client.on('qr', (qr) => {
 
 client.on('authenticated', () => {
   console.log('✅ Autenticado correctamente. Sesión guardada.');
+  attachPageDiagnostics();
   scheduleReadyWatchdog('authenticated');
 });
 
