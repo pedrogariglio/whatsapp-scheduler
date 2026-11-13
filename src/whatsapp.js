@@ -174,6 +174,25 @@ function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
   }, delayMs);
 }
 
+function installUnhandledRejectionListener(page, attempt = 0) {
+  if (!page) return;
+  page.evaluate(() => {
+    if (window.__waSchedulerUnhandled) return;
+    window.__waSchedulerUnhandled = true;
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason;
+      const detail = reason && (reason.stack || reason.message || String(reason));
+      console.error(`[wa-scheduler unhandledrejection] ${detail}`);
+    });
+  }).catch((err) => {
+    if (attempt < 10) {
+      setTimeout(() => installUnhandledRejectionListener(page, attempt + 1), 1000);
+      return;
+    }
+    console.warn('⚠️  No se pudo instalar el listener de unhandledrejection:', describeError(err));
+  });
+}
+
 let diagnosticsAttached = false;
 function attachPageDiagnostics() {
   const page = client.pupPage;
@@ -182,8 +201,11 @@ function attachPageDiagnostics() {
 
   page.on('console', (msg) => {
     const type = msg.type();
+    const text = msg.text();
+    // Los módulos diferidos que safeRequire tolera generan ruido no fatal.
+    if (text.includes('Requiring unknown module "')) return;
     if (type === 'error' || (process.env.WA_DEBUG === 'true' && type === 'warning')) {
-      console.warn(`🖥️  [WhatsApp ${type}] ${msg.text()}`);
+      console.warn(`🖥️  [WhatsApp ${type}] ${text}`);
     }
   });
 
@@ -191,10 +213,46 @@ function attachPageDiagnostics() {
     console.error('🖥️  [WhatsApp pageerror]', describeError(err));
   });
 
+  installUnhandledRejectionListener(page);
+
   const snapshot = async (label) => {
     try {
       const state = await page.evaluate(() => {
         const appState = window.AuthStore && window.AuthStore.AppState;
+        const store = window.Store;
+        const wwebjs = window.WWebJS;
+        const safeType = (value) => typeof value;
+        const present = {};
+        const relevantStoreKeys = [
+          'User', 'Conn', 'Chat', 'Contact', 'Msg', 'GroupMetadata',
+          'WAWebGroupMetadataCollection', 'ChatGetters', 'SendSeen',
+          'ForwardUtils', 'BusinessProfile', 'NewsletterMetadataCollection',
+          'WAWebNewsletterMetadataCollection', 'WAWebStreamModel',
+        ];
+        for (const key of relevantStoreKeys) {
+          present[key] = Boolean(store && store[key]);
+        }
+
+        let connKeys = null;
+        let connError = null;
+        try {
+          connKeys = store && store.Conn && store.Conn.serialize
+            ? Object.keys(store.Conn.serialize()).length
+            : null;
+        } catch (err) {
+          connError = err && (err.stack || err.message || String(err));
+        }
+
+        let mePnOk = null;
+        let meLidOk = null;
+        let userError = null;
+        try {
+          mePnOk = Boolean(store && store.User && store.User.getMaybeMePnUser && store.User.getMaybeMePnUser());
+          meLidOk = Boolean(store && store.User && store.User.getMaybeMeLidUser && store.User.getMaybeMeLidUser());
+        } catch (err) {
+          userError = err && (err.stack || err.message || String(err));
+        }
+
         return {
           version: (typeof window.Debug !== 'undefined' && window.Debug.VERSION) || null,
           appState: appState
@@ -203,10 +261,23 @@ function attachPageDiagnostics() {
           hasSynced: appState
             ? (typeof appState.hasSynced === 'function' ? 'function' : appState.hasSynced)
             : null,
-          hasStore: typeof window.Store !== 'undefined',
-          storeKeys: typeof window.Store !== 'undefined' ? Object.keys(window.Store).length : 0,
-          hasWWebJS: typeof window.WWebJS !== 'undefined',
+          hasStore: typeof store !== 'undefined',
+          storeKeys: typeof store !== 'undefined' ? Object.keys(store).length : 0,
+          hasWWebJS: typeof wwebjs !== 'undefined',
+          wwebjsKeys: typeof wwebjs !== 'undefined' ? Object.keys(wwebjs).length : 0,
+          wwebjsFns: {
+            getChats: safeType(wwebjs && wwebjs.getChats),
+            getContacts: safeType(wwebjs && wwebjs.getContacts),
+            getChatModel: safeType(wwebjs && wwebjs.getChatModel),
+            getContactModel: safeType(wwebjs && wwebjs.getContactModel),
+          },
           hasConn: Boolean(appState && window.AuthStore.Conn),
+          connKeys,
+          connError,
+          present,
+          mePnOk,
+          meLidOk,
+          userError,
         };
       });
       console.log(`🩺 WhatsApp estado (${label}):`, JSON.stringify(state));
@@ -215,8 +286,10 @@ function attachPageDiagnostics() {
     }
   };
 
-  setTimeout(() => snapshot('10s'), 10000);
-  setTimeout(() => snapshot('40s'), 40000);
+  setTimeout(() => snapshot('5s'), 5000);
+  setTimeout(() => snapshot('15s'), 15000);
+  setTimeout(() => snapshot('30s'), 30000);
+  setTimeout(() => snapshot('60s'), 60000);
 }
 
 client.on('qr', (qr) => {
@@ -228,6 +301,7 @@ client.on('qr', (qr) => {
 client.on('authenticated', () => {
   console.log('✅ Autenticado correctamente. Sesión guardada.');
   attachPageDiagnostics();
+  installUnhandledRejectionListener(client.pupPage);
   scheduleReadyWatchdog('authenticated');
 });
 
@@ -401,6 +475,13 @@ async function initializeClient() {
   clearReadyTimeout();
   clearReinitTimeout();
 
+  const diagnosticsTimer = setInterval(() => {
+    if (client.pupPage) {
+      attachPageDiagnostics();
+      clearInterval(diagnosticsTimer);
+    }
+  }, 200);
+
   try {
     console.log('🔄 Intentando inicializar cliente WhatsApp...');
     await client.initialize();
@@ -420,6 +501,9 @@ async function initializeClient() {
       }
       scheduleReinitialize('initialize-error');
     }
+  } finally {
+    clearInterval(diagnosticsTimer);
+    attachPageDiagnostics();
   }
 }
 
