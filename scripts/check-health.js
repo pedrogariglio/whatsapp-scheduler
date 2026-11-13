@@ -92,6 +92,7 @@ async function sendAlert(message, health) {
       body: JSON.stringify({
         source: 'whatsapp-scheduler',
         text: message,
+        content: message,
         health,
         timestamp: nowIso(),
       }),
