@@ -344,27 +344,19 @@ function describeError(err) {
   return `${name}${message}${stack}`;
 }
 
-// Carga contactos frescos desde WhatsApp y hace merge con cache en disco
+// Carga contactos frescos desde WhatsApp y hace merge con cache en disco.
+// getChats() se omite: la versión actual de WhatsApp Web lo hace fallar con un
+// error minificado ("r") y los grupos ya se descartan igual.
 async function refreshContacts() {
-  const [contactsResult, chatsResult] = await Promise.allSettled([
-    client.getContacts(),
-    client.getChats(),
-  ]);
-
-  const contacts = contactsResult.status === 'fulfilled' ? contactsResult.value : [];
-  const chats = chatsResult.status === 'fulfilled' ? chatsResult.value : [];
-
-  if (contactsResult.status === 'rejected') {
-    console.warn('⚠️  No se pudieron obtener contactos desde WhatsApp:', describeError(contactsResult.reason));
-  }
-  if (chatsResult.status === 'rejected') {
-    console.warn('⚠️  No se pudieron obtener chats desde WhatsApp:', describeError(chatsResult.reason));
-  }
-  if (contactsResult.status === 'rejected' && chatsResult.status === 'rejected') {
-    throw new Error('No se pudo refrescar contactos ni chats desde WhatsApp.');
+  let contacts;
+  try {
+    contacts = await client.getContacts();
+  } catch (err) {
+    console.warn('⚠️  No se pudieron obtener contactos desde WhatsApp:', describeError(err));
+    return contactsCache || loadContactsCacheFromDisk() || [];
   }
 
-  console.log(`📒 Refresco de contactos: ${contacts.length} contactos, ${chats.length} chats.`);
+  console.log(`📒 Refresco de contactos: ${contacts.length} contactos.`);
 
   const diskCache = loadContactsCacheFromDisk() || [];
   const seen = new Map();
@@ -377,13 +369,6 @@ async function refreshContacts() {
     if (!c.name || c.isGroup || c.isMe || !c.number) continue;
     if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
       seen.set(c.name, { name: c.name, phone: c.number });
-    }
-  }
-
-  for (const c of chats) {
-    if (c.isGroup || !c.name || !c.id.user) continue;
-    if (!seen.has(c.name)) {
-      seen.set(c.name, { name: c.name, phone: c.id.user });
     }
   }
 
