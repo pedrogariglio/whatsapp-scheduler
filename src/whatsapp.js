@@ -281,12 +281,44 @@ function getClient() {
   return client;
 }
 
+function describeError(err) {
+  if (!err) return String(err);
+
+  let message = err.message;
+  if (!message) {
+    try {
+      message = JSON.stringify(err);
+    } catch {
+      message = String(err);
+    }
+  }
+
+  const name = err.name && err.name !== 'Error' ? `${err.name}: ` : '';
+  const stack = err.stack ? `\n${err.stack}` : '';
+  return `${name}${message}${stack}`;
+}
+
 // Carga contactos frescos desde WhatsApp y hace merge con cache en disco
 async function refreshContacts() {
-  const [contacts, chats] = await Promise.all([
+  const [contactsResult, chatsResult] = await Promise.allSettled([
     client.getContacts(),
     client.getChats(),
   ]);
+
+  const contacts = contactsResult.status === 'fulfilled' ? contactsResult.value : [];
+  const chats = chatsResult.status === 'fulfilled' ? chatsResult.value : [];
+
+  if (contactsResult.status === 'rejected') {
+    console.warn('⚠️  No se pudieron obtener contactos desde WhatsApp:', describeError(contactsResult.reason));
+  }
+  if (chatsResult.status === 'rejected') {
+    console.warn('⚠️  No se pudieron obtener chats desde WhatsApp:', describeError(chatsResult.reason));
+  }
+  if (contactsResult.status === 'rejected' && chatsResult.status === 'rejected') {
+    throw new Error('No se pudo refrescar contactos ni chats desde WhatsApp.');
+  }
+
+  console.log(`📒 Refresco de contactos: ${contacts.length} contactos, ${chats.length} chats.`);
 
   const diskCache = loadContactsCacheFromDisk() || [];
   const seen = new Map();
@@ -310,6 +342,11 @@ async function refreshContacts() {
   }
 
   const merged = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (merged.length === 0) {
+    console.warn('⚠️  El refresco de contactos quedó vacío; se conserva el cache existente.');
+    return contactsCache || diskCache;
+  }
+
   contactsCache = merged;
   saveContactsCacheToDisk(merged);
   return merged;
