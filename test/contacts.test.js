@@ -44,6 +44,20 @@ test('deduplica por teléfono y prefiere el nombre más descriptivo', () => {
   assert.equal(stats.kept, 1);
 });
 
+test('prefiere el nombre guardado por encima del pushname', () => {
+  const fresh = [
+    makeContact({
+      number: '5493534148265',
+      name: 'meli',
+      pushname: 'melisa pastori',
+    }),
+  ];
+
+  const { contacts } = buildContactsCache(fresh, []);
+
+  assert.deepEqual(contacts, [{ name: 'meli', phone: '5493534148265' }]);
+});
+
 test('incluye solo contactos guardados y excluye grupos y cuenta propia', () => {
   const fresh = [
     makeContact({ number: '5491122222222', name: 'Ana' }),

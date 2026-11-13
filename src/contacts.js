@@ -39,15 +39,28 @@ function formatPhone(phone) {
   return phone ? `+${phone}` : '';
 }
 
+const NAME_SOURCES = [
+  { key: 'name', priority: 3 },
+  { key: 'shortName', priority: 2 },
+  { key: 'pushname', priority: 1 },
+];
+
 function pickName(contact, phone) {
-  const candidates = [contact.name, contact.shortName, contact.pushname]
-    .map(value => (typeof value === 'string' ? value.trim() : ''))
-    .filter(Boolean);
+  for (const source of NAME_SOURCES) {
+    const value = typeof contact[source.key] === 'string'
+      ? contact[source.key].trim()
+      : '';
+    if (value) return { name: value, priority: source.priority };
+  }
 
-  if (candidates.length === 0) return formatPhone(phone);
+  return { name: formatPhone(phone), priority: 0 };
+}
 
-  candidates.sort((a, b) => nameScore(b) - nameScore(a) || a.localeCompare(b));
-  return candidates[0];
+function isBetterName(candidate, existing) {
+  if (candidate.priority !== existing.priority) {
+    return candidate.priority > existing.priority;
+  }
+  return nameScore(candidate.name) > nameScore(existing.name);
 }
 
 function resolveContactPhone(contact) {
@@ -144,8 +157,8 @@ function buildContactsCache(freshContacts, fallbackCache = []) {
       continue;
     }
 
-    const name = pickName(contact, resolved.phone);
-    if (!name) {
+    const candidate = pickName(contact, resolved.phone);
+    if (!candidate.name) {
       stats.noName += 1;
       continue;
     }
@@ -153,16 +166,18 @@ function buildContactsCache(freshContacts, fallbackCache = []) {
     const existing = byPhone.get(resolved.phone);
     if (existing) {
       stats.duplicates += 1;
-      if (nameScore(name) > nameScore(existing.name)) {
-        byPhone.set(resolved.phone, { name, phone: resolved.phone });
+      if (isBetterName(candidate, existing)) {
+        byPhone.set(resolved.phone, { ...candidate, phone: resolved.phone });
       }
       continue;
     }
 
-    byPhone.set(resolved.phone, { name, phone: resolved.phone });
+    byPhone.set(resolved.phone, { ...candidate, phone: resolved.phone });
   }
 
-  const contacts = [...byPhone.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const contacts = [...byPhone.values()]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ name, phone }) => ({ name, phone }));
 
   if (contacts.length === 0) {
     stats.usedFallback = true;
