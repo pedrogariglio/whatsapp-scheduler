@@ -113,6 +113,12 @@ let readyTimeout = null;
 let reinitTimeout = null;
 let stallRetryCount = 0;
 let restartRequested = false;
+let lastAuthenticatedAt = null;
+let lastReadyAt = null;
+let readySince = null;
+let readyTimeoutCount = 0;
+let lastReadyTimeoutAt = null;
+let lastReinitializeReason = null;
 
 // Cache de contactos en memoria — inicializar desde disco
 let contactsCache = loadContactsCacheFromDisk();
@@ -142,6 +148,8 @@ function scheduleReadyWatchdog(context) {
     if (isReady) return;
 
     stallRetryCount += 1;
+    readyTimeoutCount += 1;
+    lastReadyTimeoutAt = new Date().toISOString();
     console.warn(
       `⚠️  WhatsApp quedó autenticado pero no listo tras ${READY_TIMEOUT_MS / 1000}s (${context}). Reintento ${stallRetryCount}/${MAX_STALL_RETRIES}.`
     );
@@ -156,6 +164,7 @@ function scheduleReadyWatchdog(context) {
 }
 
 function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
+  lastReinitializeReason = reason;
   if (reinitTimeout) return;
 
   clearReadyTimeout();
@@ -301,6 +310,7 @@ client.on('qr', (qr) => {
 });
 
 client.on('authenticated', () => {
+  lastAuthenticatedAt = new Date().toISOString();
   console.log('✅ Autenticado correctamente. Sesión guardada.');
   attachPageDiagnostics();
   installUnhandledRejectionListener(client.pupPage);
@@ -311,6 +321,8 @@ client.on('ready', () => {
   isReady = true;
   isInitializing = false;
   stallRetryCount = 0;
+  lastReadyAt = new Date().toISOString();
+  readySince = Date.now();
   clearReadyTimeout();
   clearReinitTimeout();
   ownerNumber = client.info.wid.user;
@@ -328,6 +340,7 @@ client.on('ready', () => {
 client.on('disconnected', (reason) => {
   isReady = false;
   isInitializing = false;
+  readySince = null;
   clearContactsCache();
   clearReadyTimeout();
   console.warn('🔴 Cliente desconectado:', reason);
@@ -344,6 +357,7 @@ client.on('disconnected', (reason) => {
 client.on('auth_failure', (msg) => {
   isReady = false;
   isInitializing = false;
+  readySince = null;
   clearReadyTimeout();
   console.error('❌ Error de autenticación:', msg);
   console.error('Borrá la carpeta .wwebjs_auth y reiniciá para escanear el QR de nuevo.');
@@ -369,6 +383,25 @@ async function sendMessage(phone, message) {
 
 function isClientReady() {
   return isReady;
+}
+
+function getHealthSnapshot() {
+  return {
+    whatsappReady: isReady,
+    initializing: isInitializing,
+    restartRequested,
+    stallRetryCount,
+    readyTimeoutCount,
+    lastAuthenticatedAt,
+    lastReadyAt,
+    lastReadyTimeoutAt,
+    lastReinitializeReason,
+    readyForSeconds: isReady && readySince
+      ? Math.floor((Date.now() - readySince) / 1000)
+      : null,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
 }
 
 // Flag para evitar loop
@@ -510,4 +543,13 @@ async function initializeClient() {
   }
 }
 
-module.exports = { client, sendMessage, isClientReady, getClient, getContacts, getOwnerNumber: () => ownerNumber, initializeClient };
+module.exports = {
+  client,
+  sendMessage,
+  isClientReady,
+  getClient,
+  getContacts,
+  getHealthSnapshot,
+  getOwnerNumber: () => ownerNumber,
+  initializeClient,
+};

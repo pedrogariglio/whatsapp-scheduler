@@ -90,8 +90,12 @@
 - [ ] Confirmar en el proximo backup periodico que no se incluya `.wwebjs_auth.bak-*`.
 
 ## Monitoreo
-- [ ] Definir chequeo simple de salud HTTP para el panel/API.
-- [ ] Agregar revision periodica de estado WhatsApp `ready`.
+- [x] Definir endpoint interno autenticado `/internal/health` con estado de `whatsappReady`, stalls y reinicios.
+- [x] Agregar script `npm run check-health` con deteccion de stalls y cooldown de alertas.
+- [x] Agregar unit files `whatsapp-scheduler-health.service` y `.timer`.
+- [ ] Configurar `HEALTH_TOKEN` y opcionalmente `ALERT_WEBHOOK_URL` en produccion.
+- [ ] Instalar y validar `whatsapp-scheduler-health.timer` en el servidor.
+- [ ] Verificar una alerta real ante `whatsappReady=false` o stall sin afectar el servicio.
 - [ ] Monitorear errores de envio y mensajes en retry vencido.
 - [ ] Monitorear crecimiento de `STATE_DIR`.
 - [ ] Monitorear reinicios del servicio `systemd`.

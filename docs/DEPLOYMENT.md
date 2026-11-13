@@ -603,19 +603,95 @@ Validaciones ya realizadas en produccion:
 
 ## Health Check
 
-Endpoint:
+Endpoints:
 
 ```text
 GET /health
+GET /internal/health
 ```
+
+`/health` mantiene el comportamiento del panel: puede devolver `401` sin sesion autenticada.
+
+`/internal/health` esta pensado para monitoreo y requiere el header `X-Health-Token`. Si `HEALTH_TOKEN` no esta definido, el endpoint responde `404`.
 
 Ejemplo:
 
 ```bash
-curl http://10.0.0.1:3001/health
+curl -H "X-Health-Token: $HEALTH_TOKEN" http://10.0.0.1:3001/internal/health
 ```
 
-Si no hay sesion autenticada del panel, la app puede devolver `401` por middleware de auth. Para monitoreo futuro conviene evaluar un health check operacional especifico o autenticado.
+Respuesta esperada:
+
+```json
+{
+  "ok": true,
+  "whatsappReady": true,
+  "initializing": false,
+  "restartRequested": false,
+  "stallRetryCount": 0,
+  "readyTimeoutCount": 0,
+  "lastAuthenticatedAt": "...",
+  "lastReadyAt": "...",
+  "lastReadyTimeoutAt": null,
+  "lastReinitializeReason": null,
+  "readyForSeconds": 120,
+  "uptimeSeconds": 300,
+  "timestamp": "..."
+}
+```
+
+### Monitoreo automatico
+
+Generar un token:
+
+```bash
+openssl rand -hex 32
+```
+
+Agregar en `.env`:
+
+```env
+HEALTH_TOKEN=token-generado
+ALERT_WEBHOOK_URL=
+HEALTH_URL=http://10.0.0.1:3001/internal/health
+HEALTH_FAILURE_THRESHOLD=2
+HEALTH_ALERT_COOLDOWN_SECONDS=900
+HEALTH_STARTUP_GRACE_SECONDS=180
+```
+
+El script de monitoreo alerta por journal y, opcionalmente, por webhook cuando:
+
+- `/internal/health` no responde;
+- `whatsappReady` es `false` durante varios chequeos;
+- el proceso pidio reinicio;
+- aparecio un nuevo stall `authenticated -> ready`.
+
+Si `ALERT_WEBHOOK_URL` esta vacio, la alerta queda solo en `journalctl`.
+
+Instalar el timer:
+
+```bash
+sudo cp deploy/systemd/whatsapp-scheduler-health.service /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-health.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now whatsapp-scheduler-health.timer
+```
+
+Ejecutar una prueba manual:
+
+```bash
+sudo systemctl start whatsapp-scheduler-health.service
+sudo systemctl status --no-pager whatsapp-scheduler-health.service
+journalctl -u whatsapp-scheduler-health.service -n 100 --no-pager
+```
+
+Ver chequeos programados:
+
+```bash
+systemctl list-timers whatsapp-scheduler-health.timer --no-pager
+```
+
+El estado entre chequeos se guarda en `STATE_DIR/data/health-monitor-state.json` para detectar stalls nuevos y aplicar cooldown de alertas.
 
 ## Operacion y Mantenimiento
 
@@ -654,9 +730,12 @@ Si hubo cambios en unit files:
 sudo cp deploy/systemd/whatsapp-scheduler-docker.service /etc/systemd/system/
 sudo cp deploy/systemd/whatsapp-scheduler-backup.service /etc/systemd/system/
 sudo cp deploy/systemd/whatsapp-scheduler-backup.timer /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-health.service /etc/systemd/system/
+sudo cp deploy/systemd/whatsapp-scheduler-health.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart whatsapp-scheduler-docker.service
 sudo systemctl restart whatsapp-scheduler-backup.timer
+sudo systemctl restart whatsapp-scheduler-health.timer
 ```
 
 ## Restore

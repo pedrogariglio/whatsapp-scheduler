@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
+    "check-health": "node scripts/check-health.js",
     "postinstall": "node scripts/patch-whatsapp-web.js",
     "dev": "nodemon --ignore data/ --ignore .wwebjs_auth/ src/index.js",
     "setup-admin": "node scripts/setup-admin.js",

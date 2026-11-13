@@ -1,5 +1,6 @@
 require('dotenv').config();
-const { client, getContacts } = require('./whatsapp');
+const { client, getContacts, getHealthSnapshot } = require('./whatsapp');
+const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
@@ -13,6 +14,7 @@ const { ensureConfig, getConfig, saveConfig, hasConfiguredAdmin } = require('./c
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
 const SESSION_SECRET = process.env.SESSION_SECRET;
+const HEALTH_TOKEN = process.env.HEALTH_TOKEN;
 const app = express();
 
 if (!SESSION_SECRET || SESSION_SECRET.length < 32) {
@@ -43,6 +45,31 @@ app.use(session({
     secure: process.env.COOKIE_SECURE === 'true',
   },
 }));
+
+function hasValidHealthToken(req) {
+  if (!HEALTH_TOKEN) return false;
+
+  const provided = req.get('x-health-token') || '';
+  if (!provided || provided.length !== HEALTH_TOKEN.length) return false;
+
+  return crypto.timingSafeEqual(
+    Buffer.from(provided),
+    Buffer.from(HEALTH_TOKEN),
+  );
+}
+
+// Internal health endpoint for monitoring. Disabled unless HEALTH_TOKEN is set.
+app.get('/internal/health', (req, res) => {
+  if (!HEALTH_TOKEN) {
+    return res.status(404).json({ ok: false, error: 'Not found' });
+  }
+
+  if (!hasValidHealthToken(req)) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+
+  return res.json({ ok: true, ...getHealthSnapshot() });
+});
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

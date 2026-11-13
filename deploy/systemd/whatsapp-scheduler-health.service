@@ -1,0 +1,18 @@
+[Unit]
+Description=Check WhatsApp Scheduler health
+After=network-online.target whatsapp-scheduler-docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pedrogariglio
+Group=pedrogariglio
+WorkingDirectory=/home/pedrogariglio/whatsapp-scheduler
+EnvironmentFile=/home/pedrogariglio/whatsapp-scheduler/.env
+Environment=HEALTH_URL=http://10.0.0.1:3001/internal/health
+Environment=PATH=/home/pedrogariglio/.nvm/versions/node/v20.20.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/env npm run check-health
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths=/opt/whatsapp-scheduler/state

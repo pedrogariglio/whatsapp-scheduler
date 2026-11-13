@@ -162,6 +162,8 @@ CHROME_BIN=
 TRUST_PROXY=false
 COOKIE_SECURE=false
 ALLOW_LOCAL_WEB_SETUP=false
+HEALTH_TOKEN=
+ALERT_WEBHOOK_URL=
 ```
 
 Variables relevantes:
@@ -171,6 +173,8 @@ Variables relevantes:
 - `STATE_DIR`: directorio persistente para `config.json`, DB, sesión de WhatsApp y uploads
 - `CHROME_BIN`: ruta explícita al navegador Chromium/Chrome si hace falta
 - `ALLOW_LOCAL_WEB_SETUP`: dejar `false` en entornos estables; usar `npm run setup-admin`
+- `HEALTH_TOKEN`: habilita `/internal/health` para monitoreo con `npm run check-health`
+- `ALERT_WEBHOOK_URL`: destino opcional para alertas de monitoreo; si está vacío, alerta solo por journal
 
 ### Bootstrap de admin
 
