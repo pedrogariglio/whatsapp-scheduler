@@ -175,7 +175,7 @@ function scheduleReinitialize(reason, delayMs = REINIT_DELAY_MS) {
 }
 
 function installUnhandledRejectionListener(page, attempt = 0) {
-  if (!page) return;
+  if (process.env.WA_DEBUG !== 'true' || !page) return;
   page.evaluate(() => {
     if (window.__waSchedulerUnhandled) return;
     window.__waSchedulerUnhandled = true;
@@ -195,6 +195,7 @@ function installUnhandledRejectionListener(page, attempt = 0) {
 
 let diagnosticsAttached = false;
 function attachPageDiagnostics() {
+  if (process.env.WA_DEBUG !== 'true') return;
   const page = client.pupPage;
   if (!page || diagnosticsAttached) return;
   diagnosticsAttached = true;
