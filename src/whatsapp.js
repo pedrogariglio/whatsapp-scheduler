@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 const { stateDir } = require('./config');
+const { buildContactsCache } = require('./contacts');
 
 const CONTACTS_CACHE_PATH = path.join(stateDir, 'data', 'contacts-cache.json');
 const AUTH_PATH = path.join(stateDir, '.wwebjs_auth');
@@ -419,43 +420,44 @@ function describeError(err) {
   return `${name}${message}${stack}`;
 }
 
-// Carga contactos frescos desde WhatsApp y hace merge con cache en disco.
-// getChats() se omite: la versión actual de WhatsApp Web lo hace fallar con un
-// error minificado ("r") y los grupos ya se descartan igual.
+// Carga contactos frescos desde WhatsApp y reconstruye el cache con contactos
+// guardados. getChats() se omite: la versión actual de WhatsApp Web lo hace
+// fallar con un error minificado ("r") y los grupos ya se descartan igual.
 async function refreshContacts() {
-  let contacts;
+  let freshContacts;
   try {
-    contacts = await client.getContacts();
+    freshContacts = await client.getContacts();
   } catch (err) {
     console.warn('⚠️  No se pudieron obtener contactos desde WhatsApp:', describeError(err));
-    return contactsCache || loadContactsCacheFromDisk() || [];
+    const fallback = buildContactsCache([], contactsCache || loadContactsCacheFromDisk() || []);
+    contactsCache = fallback.contacts;
+    return contactsCache;
   }
 
-  console.log(`📒 Refresco de contactos: ${contacts.length} contactos.`);
+  const fallbackCache = contactsCache || loadContactsCacheFromDisk() || [];
+  const { contacts, stats } = buildContactsCache(freshContacts, fallbackCache);
 
-  const diskCache = loadContactsCacheFromDisk() || [];
-  const seen = new Map();
+  console.log(
+    `📒 Contactos crudos: ${stats.raw} | grupos: ${stats.groups} | propios: ${stats.me} | ` +
+    `no guardados: ${stats.notSaved} | sin número: ${stats.noNumber} | inválidos: ${stats.invalidNumber} | ` +
+    `LID sin resolver: ${stats.unresolvedLid} | duplicados: ${stats.duplicates} | ` +
+    `final: ${stats.kept}${stats.usedFallback ? ' (fallback)' : ''}`
+  );
 
-  for (const c of diskCache) {
-    seen.set(c.name, c);
-  }
-
-  for (const c of contacts) {
-    if (!c.name || c.isGroup || c.isMe || !c.number) continue;
-    if (!seen.has(c.name) || c.number.length < seen.get(c.name).phone.length) {
-      seen.set(c.name, { name: c.name, phone: c.number });
-    }
-  }
-
-  const merged = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (merged.length === 0) {
+  if (contacts.length === 0) {
     console.warn('⚠️  El refresco de contactos quedó vacío; se conserva el cache existente.');
-    return contactsCache || diskCache;
+    return contactsCache || [];
   }
 
-  contactsCache = merged;
-  saveContactsCacheToDisk(merged);
-  return merged;
+  if (stats.usedFallback) {
+    console.warn('⚠️  No se pudo reconstruir el cache con datos frescos; se conserva el cache previo.');
+    contactsCache = contacts;
+    return contactsCache;
+  }
+
+  contactsCache = contacts;
+  saveContactsCacheToDisk(contacts);
+  return contacts;
 }
 
 async function getContacts() {

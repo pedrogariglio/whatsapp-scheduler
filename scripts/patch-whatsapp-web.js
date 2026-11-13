@@ -112,3 +112,29 @@ if (storeSource.includes(storeMarker)) {
   fs.writeFileSync(storeTarget, storeSource);
   process.stdout.write('whatsapp-web.js Store parcheado para tolerar módulos diferidos.\n');
 }
+
+const utilsTarget = path.join(injectedDir, 'Utils.js');
+const utilsMarker = 'whatsapp-scheduler: resolve LID contacts to phone numbers';
+
+if (!fs.existsSync(utilsTarget)) {
+  throw new Error(`No se encontró el archivo de whatsapp-web.js: ${utilsTarget}`);
+}
+
+let utilsSource = fs.readFileSync(utilsTarget, 'utf8');
+if (utilsSource.includes(utilsMarker)) {
+  process.stdout.write('whatsapp-web.js Utils ya parcheado.\n');
+} else {
+  const original = '        res.userid = window.Store.ContactMethods.getUserid(contact);';
+  const replacement = `        // ${utilsMarker}
+        res.userid = (contact.id && contact.id.server === 'lid' && contact.phoneNumber && contact.phoneNumber.user)
+            ? contact.phoneNumber.user
+            : window.Store.ContactMethods.getUserid(contact);`;
+
+  if (!utilsSource.includes(original)) {
+    throw new Error('La estructura esperada de Utils.js cambió; no se aplica el parche.');
+  }
+
+  utilsSource = utilsSource.replace(original, replacement);
+  fs.writeFileSync(utilsTarget, utilsSource);
+  process.stdout.write('whatsapp-web.js Utils parcheado para resolver LID a teléfono.\n');
+}
