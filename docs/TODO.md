@@ -72,7 +72,7 @@
 - [x] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
 - [x] Implementar limpieza de uploads huerfanos al iniciar.
 - [x] Corregir envio de adjuntos descartando `__x_id` antes de construir el `Msg` (backport upstream v1.34.8).
-- [ ] Validar en produccion un envio real con adjunto despues del fix.
+- [x] Validar en produccion un envio real con adjunto despues del fix (`Message #26 sent`).
 - [ ] Verificar en produccion que la limpieza no borre adjuntos pendientes.
 
 ## Backups
