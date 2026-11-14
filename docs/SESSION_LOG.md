@@ -537,6 +537,10 @@
   - Diagnosticado fallo de envio con adjunto: `__x_id` de `mediaOptions` colisionaba con el `id` interno del `Msg`.
   - Aplicado backport del fix upstream de whatsapp-web.js v1.34.8 en `scripts/patch-whatsapp-web.js`.
   - Validado en produccion: envio con adjunto OK (`Message #26 sent`).
+  - Refactorizados scheduler y bot a factories inyectables.
+  - Extraido filtro de mensajes propios a `src/message-filter.js`.
+  - Agregados tests de scheduler, bot y filtro de mensajes; total 37 tests pasando.
+  - Cobertura nueva: retries, fallo permanente, no duplicacion concurrente, owner, terceros, grupos, chat propio y flujo `/agendar`.
 
  Pendiente actualizado
 

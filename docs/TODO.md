@@ -113,9 +113,9 @@
 - [ ] Agregar checklist de validacion post-deploy.
 - [ ] Mejorar visibilidad en UI/API para mensajes `pending`, `retry`, `sent` y `failed`.
 - [ ] Agregar endpoint o vista de salud operacional.
-- [ ] Revisar cobertura de pruebas para scheduler resiliente y reintentos persistidos.
+- [x] Agregar cobertura de pruebas para scheduler: envio, retries, fallo permanente y no duplicacion concurrente.
 - [x] Agregar cobertura de pruebas para limpieza de uploads huerfanos.
-- [ ] Revisar cobertura de pruebas para bot en chat propio y comandos explicitos.
+- [x] Agregar cobertura de pruebas para bot: owner, chat propio, terceros, grupos y flujo /agendar.
 
 ## Multi-instancia / crecimiento
 - [x] Definir modelo de una instancia aislada por persona.

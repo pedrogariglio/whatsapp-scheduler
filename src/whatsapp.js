@@ -6,6 +6,7 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const { stateDir } = require('./config');
 const { buildContactsCache } = require('./contacts');
+const { shouldHandleOwnMessage } = require('./message-filter');
 
 const CONTACTS_CACHE_PATH = path.join(stateDir, 'data', 'contacts-cache.json');
 const AUTH_PATH = path.join(stateDir, '.wwebjs_auth');
@@ -408,21 +409,10 @@ function getHealthSnapshot() {
 let botIsReplying = false;
 
 client.on('message_create', async (message) => {
-  if (!message.fromMe) return;
-  if (message.hasQuotedMsg) return;
-  if (botIsReplying) return;
-
   const ownCus = client.info.wid._serialized;
   const ownLid = ownerLid || ownCus.replace('@c.us', '@lid');
-  const remote = message.id.remote;
-  const from = message.from;
 
-  const isOwnChat =
-    remote === ownCus ||
-    remote === ownLid ||
-    (from === ownCus && (message.to === ownCus || message.to === ownLid));
-
-  if (!isOwnChat) return;
+  if (!shouldHandleOwnMessage(message, { ownCus, ownLid, botIsReplying })) return;
 
   botIsReplying = true;
   try {
