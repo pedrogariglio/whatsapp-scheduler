@@ -542,6 +542,8 @@
   - Agregados tests de scheduler, bot y filtro de mensajes; total 37 tests pasando.
   - Cobertura nueva: retries, fallo permanente, no duplicacion concurrente, owner, terceros, grupos, chat propio y flujo `/agendar`.
   - Reemplazado `MemoryStore` de `express-session` por `FileSessionStore` en `STATE_DIR/sessions`.
+  - Detectado backup fallido por cambios en `.wwebjs_auth` durante `tar`.
+  - Agregada pausa opcional del contenedor durante el backup (`BACKUP_PAUSE_CONTAINER`) y limpieza de archivos parciales.
   - Agregados 6 tests del session store; total 43 tests pasando.
   - `SESSION_TTL_DAYS` configurable (default 7 dias).
   - Validado en produccion: sin warning de `MemoryStore` y sesion del panel activa tras reiniciar el contenedor.
@@ -551,6 +553,7 @@
   - investigar stalls intermitentes `authenticated` -> `ready`
   - mantener `.wwebjs_auth.bak-*` unos dias mas antes de eliminarlo
   - confirmar que el proximo backup periodico no incluya el backup legacy de auth
+  - verificar un backup en produccion con contenedor pausado y checksum valido
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
   - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes

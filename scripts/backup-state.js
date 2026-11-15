@@ -24,6 +24,7 @@ const retentionMinCount = parseNonNegativeInteger(
   7,
   'BACKUP_RETENTION_MIN_COUNT',
 );
+const pauseContainer = process.env.BACKUP_PAUSE_CONTAINER || '';
 
 function usage() {
   console.log(`Usage: npm run backup:state
@@ -33,7 +34,55 @@ Environment:
   BACKUP_DIR   Directory where backups are written. Defaults to ../backups next to STATE_DIR.
   BACKUP_RETENTION_DAYS       Delete backups older than this many days. Defaults to 30. Use 0 to disable age pruning.
   BACKUP_RETENTION_MIN_COUNT  Always keep at least this many newest backups. Defaults to 7.
+  BACKUP_PAUSE_CONTAINER      Optional Docker container to pause during the snapshot for consistency.
 `);
+}
+
+
+function runDocker(args, options = {}) {
+  return spawnSync('docker', args, {
+    timeout: 30000,
+    ...options,
+  });
+}
+
+function pauseContainerIfRunning(name) {
+  if (!name) return false;
+
+  const inspect = runDocker(['inspect', '-f', '{{.State.Running}}', name], {
+    encoding: 'utf8',
+  });
+
+  if (inspect.error || inspect.status !== 0) {
+    console.warn(`Backup: no se pudo inspeccionar el contenedor ${name}; se continua sin pausa.`);
+    return false;
+  }
+
+  if (String(inspect.stdout || '').trim() !== 'true') {
+    console.log(`Backup: el contenedor ${name} no esta corriendo; no se pausa.`);
+    return false;
+  }
+
+  const pause = runDocker(['pause', name], { stdio: 'inherit' });
+  if (pause.error || pause.status !== 0) {
+    console.warn(`Backup: no se pudo pausar ${name}; se continua sin pausa.`);
+    return false;
+  }
+
+  console.log(`Backup: contenedor ${name} pausado para snapshot consistente.`);
+  return true;
+}
+
+function unpauseContainerIfNeeded(name, wasPaused) {
+  if (!wasPaused) return;
+
+  const unpause = runDocker(['unpause', name], { stdio: 'inherit' });
+  if (unpause.error || unpause.status !== 0) {
+    console.error(`Backup: no se pudo reanudar el contenedor ${name}. Revisar manualmente.`);
+    return;
+  }
+
+  console.log(`Backup: contenedor ${name} reanudado.`);
 }
 
 function fail(message) {
@@ -140,38 +189,47 @@ async function main() {
   const archiveName = `${backupPrefix}${timestamp()}${backupSuffix}`;
   const archivePath = path.join(backupDir, archiveName);
 
-  const tar = spawnSync('tar', [
-    '--create',
-    '--gzip',
-    '--file',
-    archivePath,
-    '--directory',
-    stateDir,
-    '--exclude=node_modules',
-    '--exclude=.git',
-    '--exclude=.vscode',
-    '--exclude=.idea',
-    '--exclude=.wwebjs_cache',
-    '--exclude=.wwebjs_auth.bak-*',
-    '--exclude=backups',
-    '--exclude=*.tar',
-    '--exclude=*.tar.gz',
-    '--exclude=*.sha256',
-    '--exclude=*.log',
-    '--exclude=npm-debug.log*',
-    '--exclude=.DS_Store',
-    '--exclude=Thumbs.db',
-    '.',
-  ], {
-    stdio: 'inherit',
-  });
+  let paused = false;
+  try {
+    paused = pauseContainerIfRunning(pauseContainer);
 
-  if (tar.error) {
-    fail(`could not run tar: ${tar.error.message}`);
-  }
+    const tar = spawnSync('tar', [
+      '--create',
+      '--gzip',
+      '--file',
+      archivePath,
+      '--directory',
+      stateDir,
+      '--exclude=node_modules',
+      '--exclude=.git',
+      '--exclude=.vscode',
+      '--exclude=.idea',
+      '--exclude=.wwebjs_cache',
+      '--exclude=.wwebjs_auth.bak-*',
+      '--exclude=backups',
+      '--exclude=*.tar',
+      '--exclude=*.tar.gz',
+      '--exclude=*.sha256',
+      '--exclude=*.log',
+      '--exclude=npm-debug.log*',
+      '--exclude=.DS_Store',
+      '--exclude=Thumbs.db',
+      '.',
+    ], {
+      stdio: 'inherit',
+    });
 
-  if (tar.status !== 0) {
-    fail(`tar exited with status ${tar.status}`);
+    if (tar.error) {
+      fs.rmSync(archivePath, { force: true });
+      throw new Error(`could not run tar: ${tar.error.message}`);
+    }
+
+    if (tar.status !== 0) {
+      fs.rmSync(archivePath, { force: true });
+      throw new Error(`tar exited with status ${tar.status}; se elimino el archivo parcial`);
+    }
+  } finally {
+    unpauseContainerIfNeeded(pauseContainer, paused);
   }
 
   fs.chmodSync(archivePath, 0o600);

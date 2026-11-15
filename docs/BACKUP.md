@@ -6,6 +6,31 @@
 - Cada backup genera un `.tar.gz` y un `.sha256`.
 - Se excluyen dependencias, metadatos de git, cache de navegador y archivos regenerables.
 
+
+## Consistencia con el contenedor
+
+El perfil de Chromium cambia mientras la app corre. Para evitar errores como:
+
+```text
+tar: ./.wwebjs_auth/session/Default: file changed as we read it
+```
+
+los unit files de systemd definen:
+
+```env
+BACKUP_PAUSE_CONTAINER=whatsapp-scheduler
+```
+
+El script pausa el contenedor antes de crear el tar y lo reanuda al terminar, incluso si `tar` falla. Si la creacion falla, elimina el archivo parcial para que no quede un backup invalido sin checksum.
+
+Para una instancia adicional, el template usa:
+
+```env
+BACKUP_PAUSE_CONTAINER=whatsapp-scheduler-<nombre>
+```
+
+Si el contenedor no esta corriendo, el backup continua sin pausarlo.
+
 ## Crear backup
 ```bash
 npm run backup:state
