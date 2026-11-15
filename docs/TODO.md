@@ -50,9 +50,9 @@
 - [x] Definir retencion de backups y politica de rotacion.
 - [x] Probar restauracion de backup en un directorio limpio antes de considerarlo confiable.
 - [x] Asegurar permisos restrictivos sobre `STATE_DIR`, `.env` y backups.
-- [ ] Confirmar que `ALLOW_LOCAL_WEB_SETUP=false` en produccion.
-- [ ] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
-- [ ] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
+- [x] Confirmar que `ALLOW_LOCAL_WEB_SETUP=false` en produccion.
+- [x] Confirmar que `SESSION_SECRET` sea unico, largo y no versionado.
+- [x] Revisar reglas `ufw` y mantener `3001/tcp` expuesto solo por `wg0`.
 - [x] Preparar despliegue Docker con Chromium dentro del contenedor para eliminar dependencia de Snap.
 - [x] Validar despliegue Docker en servidor y migrar desde `whatsapp-scheduler.service` a `whatsapp-scheduler-docker.service`.
 - [x] Ejecutar preflight en servidor antes de la prueba Docker: servicio host, backup reciente, `docker --version` y `docker compose version`.
@@ -67,6 +67,7 @@
 - [x] Actualizar o retirar el rollback legacy a `whatsapp-scheduler.service`: el unit sigue presente, pero el host ya no tiene binario local de Chromium.
 - [x] Definir una convencion de tags o checkpoints estables para acelerar rollback Docker-native.
 - [x] Crear el primer tag `prod-stable-*` despues del proximo checkpoint productivo que se quiera conservar.
+- [x] Crear checkpoint `prod-stable-20261115` con contactos, adjuntos, sesiones persistentes, monitoreo y backups consistentes.
 - [ ] Agregar limites operativos al servicio `systemd` si no afectan Chromium headless.
 - [x] Definir y validar procedimiento de rotacion de credenciales del panel.
 - [x] Definir procedimiento controlado para reenrolar WhatsApp si se invalida la sesion.
@@ -119,6 +120,13 @@
 - [x] Agregar cobertura de pruebas para scheduler: envio, retries, fallo permanente y no duplicacion concurrente.
 - [x] Agregar cobertura de pruebas para limpieza de uploads huerfanos.
 - [x] Agregar cobertura de pruebas para bot: owner, chat propio, terceros, grupos y flujo /agendar.
+
+## UI / experiencia
+- [x] Unificar tema claro en panel, login y setup.
+- [x] Pasar a paleta calida con header y encabezados de panel diferenciados.
+- [x] Limitar Historial a los ultimos 8 mensajes con boton `Ver mas`.
+- [ ] Revisar feedback visual y ajustar contraste, tipografia o densidad.
+- [ ] Mostrar reintentos y errores detallados por mensaje en la UI.
 
 ## Multi-instancia / crecimiento
 - [x] Definir modelo de una instancia aislada por persona.
