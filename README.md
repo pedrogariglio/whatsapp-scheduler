@@ -161,6 +161,7 @@ STATE_DIR=./state
 CHROME_BIN=
 TRUST_PROXY=false
 COOKIE_SECURE=false
+SESSION_TTL_DAYS=7
 ALLOW_LOCAL_WEB_SETUP=false
 HEALTH_TOKEN=
 ALERT_WEBHOOK_URL=
@@ -172,6 +173,7 @@ Variables relevantes:
 - `SESSION_SECRET`: obligatorio, mínimo 32 caracteres
 - `STATE_DIR`: directorio persistente para `config.json`, DB, sesión de WhatsApp y uploads
 - `CHROME_BIN`: ruta explícita al navegador Chromium/Chrome si hace falta
+- `SESSION_TTL_DAYS`: dias de retencion de sesiones del panel en disco (default 7)
 - `ALLOW_LOCAL_WEB_SETUP`: dejar `false` en entornos estables; usar `npm run setup-admin`
 - `HEALTH_TOKEN`: habilita `/internal/health` para monitoreo con `npm run check-health`
 - `ALERT_WEBHOOK_URL`: destino opcional para alertas de monitoreo; si está vacío, alerta solo por journal

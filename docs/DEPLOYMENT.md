@@ -39,6 +39,7 @@ Contenido esperado:
 | `config.json` | Configuracion de admin con `passwordHash`. |
 | `data/scheduler.db` | DB local de mensajes. |
 | `data/contacts-cache.json` | Cache de contactos. |
+| `sessions/` | Sesiones del panel persistidas en disco. |
 | `.wwebjs_auth/` | Sesion persistente de WhatsApp Web. |
 | `uploads/` | Adjuntos pendientes de envio. |
 
@@ -77,6 +78,7 @@ STATE_DIR=/opt/whatsapp-scheduler/state
 CHROME_BIN=/usr/bin/chromium-browser
 TRUST_PROXY=false
 COOKIE_SECURE=false
+SESSION_TTL_DAYS=7
 ALLOW_LOCAL_WEB_SETUP=false
 ```
 
@@ -91,6 +93,7 @@ Variables relevantes:
 | `CHROME_BIN` | `/usr/bin/chromium-browser` en host, `/usr/bin/chromium` en Docker | Ruta del navegador headless. |
 | `TRUST_PROXY` | `false` | Mantener `false` si no hay reverse proxy. |
 | `COOKIE_SECURE` | `false` | Usar `true` solo con HTTPS. |
+| `SESSION_TTL_DAYS` | `7` | Dias de retencion de sesiones del panel en `STATE_DIR/sessions`. |
 | `ALLOW_LOCAL_WEB_SETUP` | `false` | Setup web deshabilitado en produccion. |
 
 Para despliegue Docker, agregar opcionalmente:

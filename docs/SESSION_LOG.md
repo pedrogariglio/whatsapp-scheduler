@@ -541,6 +541,9 @@
   - Extraido filtro de mensajes propios a `src/message-filter.js`.
   - Agregados tests de scheduler, bot y filtro de mensajes; total 37 tests pasando.
   - Cobertura nueva: retries, fallo permanente, no duplicacion concurrente, owner, terceros, grupos, chat propio y flujo `/agendar`.
+  - Reemplazado `MemoryStore` de `express-session` por `FileSessionStore` en `STATE_DIR/sessions`.
+  - Agregados 6 tests del session store; total 43 tests pasando.
+  - `SESSION_TTL_DAYS` configurable (default 7 dias).
 
  Pendiente actualizado
 
@@ -551,6 +554,7 @@
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
   - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes
+  - validar que la sesion del panel sobrevive un reinicio
 
  Resumen estructurado
 

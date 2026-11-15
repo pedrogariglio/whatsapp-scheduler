@@ -11,11 +11,18 @@ const messagesRouter = require('./routes/messages');
 const { hashPassword, verifyPassword } = require('./auth');
 const { ensureConfig, getConfig, saveConfig, hasConfiguredAdmin, stateDir } = require('./config');
 const { cleanupOrphanUploads } = require('./uploads');
+const { FileSessionStore } = require('./session-store');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const HEALTH_TOKEN = process.env.HEALTH_TOKEN;
+const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 7);
+const SESSION_TTL_MS = (Number.isFinite(SESSION_TTL_DAYS) && SESSION_TTL_DAYS > 0 ? SESSION_TTL_DAYS : 7) * 24 * 60 * 60 * 1000;
+const sessionStore = new FileSessionStore({
+  dir: path.join(stateDir, 'sessions'),
+  ttlMs: SESSION_TTL_MS,
+});
 const app = express();
 
 if (!SESSION_SECRET || SESSION_SECRET.length < 32) {
@@ -38,6 +45,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(session({
   name: 'wa.sid',
   secret: SESSION_SECRET,
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -230,6 +238,7 @@ initDB().then(() => {
 
 process.on('SIGINT', async () => {
   console.log('\n⛔ Cerrando servidor...');
+  sessionStore.close();
   await client.destroy();
   process.exit(0);
 });

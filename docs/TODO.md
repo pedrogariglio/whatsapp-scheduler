@@ -138,7 +138,8 @@
 - [ ] Investigar limites y comportamiento de `whatsapp-web.js` ante sesiones largas.
 - [ ] Evaluar estrategia para detectar y recuperar desconexiones silenciosas de WhatsApp Web.
 - [ ] Investigar stalls intermitentes `authenticated` -> `ready` en WhatsApp Web y evaluar mitigacion adicional.
-- [ ] Revisar warning de `MemoryStore` de `express-session` y evaluar store persistente.
+- [x] Reemplazar `MemoryStore` de `express-session` por store persistente en disco (`STATE_DIR/sessions`).
+- [ ] Validar en produccion que la sesion del panel sobrevive un reinicio.
 - [ ] Evaluar empaquetado o instalador Linux para reducir pasos manuales de despliegue.
 - [ ] Evaluar cifrado o proteccion adicional para backups que contienen estado sensible.
 
