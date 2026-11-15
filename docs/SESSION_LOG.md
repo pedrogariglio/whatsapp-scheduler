@@ -544,17 +544,16 @@
   - Reemplazado `MemoryStore` de `express-session` por `FileSessionStore` en `STATE_DIR/sessions`.
   - Agregados 6 tests del session store; total 43 tests pasando.
   - `SESSION_TTL_DAYS` configurable (default 7 dias).
+  - Validado en produccion: sin warning de `MemoryStore` y sesion del panel activa tras reiniciar el contenedor.
 
  Pendiente actualizado
 
   - investigar stalls intermitentes `authenticated` -> `ready`
   - mantener `.wwebjs_auth.bak-*` unos dias mas antes de eliminarlo
   - confirmar que el proximo backup periodico no incluya el backup legacy de auth
-  - revisar warning de `MemoryStore` de `express-session`
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
   - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes
-  - validar que la sesion del panel sobrevive un reinicio
 
  Resumen estructurado
 
