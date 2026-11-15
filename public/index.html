@@ -27,6 +27,8 @@
       --muted:         #6b7280;
       --focus-ring:    rgba(17, 24, 39, 0.08);
       --shadow:        0 1px 2px rgba(16, 24, 40, 0.04);
+      --header-bg:     #e9eef5;
+      --header-border: #d8e0ea;
       --mono:          'IBM Plex Mono', monospace;
       --sans:          'IBM Plex Sans', sans-serif;
     }
@@ -383,15 +385,15 @@
   .badge-retrying { background: var(--warning-soft); color: var(--warning); border: 1px solid #fde68a; }
 
     /* ── LIGHT THEME ── */
-    header { background: var(--surface); box-shadow: 0 1px 0 rgba(16, 24, 40, 0.03); }
+    header { background: var(--header-bg); border-bottom-color: var(--header-border); box-shadow: 0 1px 0 rgba(16, 24, 40, 0.03); }
     .logo { font-family: var(--sans); font-size: 16px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; color: var(--text); }
     .logo span { color: var(--muted); }
-    .status-badge { font-family: var(--sans); font-size: 12px; letter-spacing: 0; }
+    .status-badge { font-family: var(--sans); font-size: 12px; letter-spacing: 0; color: #475569; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(17, 24, 39, 0.06); border-radius: 999px; padding: 6px 10px; }
     .status-dot.online { background: var(--success); box-shadow: 0 0 0 3px var(--success-soft); }
     .status-dot.offline { background: var(--danger); }
     main { max-width: 1080px; }
     .panel { border-radius: 10px; box-shadow: var(--shadow); }
-    .panel-header { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); padding: 16px 20px; }
+    .panel-header { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); padding: 16px 20px; background: var(--surface-muted); }
     .panel-header .count { background: var(--surface-muted); color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
     label { font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text); }
     input, textarea { background: var(--surface); border-color: var(--border-strong); border-radius: 8px; font-family: var(--sans); font-size: 14px; }
@@ -416,6 +418,7 @@
     .badge-sent { background: var(--success-soft); color: var(--success); border-color: #a7f3d0; }
     .badge-failed { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; }
     .badge-cancelled { background: var(--surface-muted); color: var(--muted); border-color: var(--border); }
+    .tabs { background: var(--surface-muted); }
     .tab { font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
     .tab.active { color: var(--text); border-bottom-color: var(--accent); }
     .empty { background: var(--surface-muted); border-color: var(--border-strong); border-radius: 8px; font-family: var(--sans); font-size: 13px; }
@@ -431,6 +434,21 @@
     .suggestion-phone { font-family: var(--mono); font-size: 11px; }
     .suggestions-empty { font-family: var(--sans); font-size: 12px; }
     #charCount.warning { color: var(--warning); }
+
+    .load-more {
+      width: 100%;
+      margin-top: 4px;
+      padding: 9px 12px;
+      background: transparent;
+      border: 1px dashed var(--border-strong);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .load-more:hover { background: var(--surface-muted); color: var(--text); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -531,6 +549,7 @@
 <script>
   const API = '';  // misma origen, sin prefijo adicional
   let currentTab = 'pending';
+  let historyExpanded = false;
 
   // ── HEALTH CHECK ──
   async function checkStatus() {
@@ -569,12 +588,18 @@
       const sorted = [...d.messages].sort((a, b) =>
         sortOrder === 'desc' ? b.id - a.id : a.id - b.id
       );
+      const total = sorted.length;
+      const visible = currentTab === 'all' && !historyExpanded
+        ? sorted.slice(0, 8)
+        : sorted;
 
       document.getElementById('msgCount').textContent = d.count;
       document.getElementById('listLabel').textContent =
-        currentTab === 'pending' ? 'Mensajes pendientes' : 'Historial completo';
+        currentTab === 'pending'
+          ? 'Mensajes pendientes'
+          : (historyExpanded ? 'Historial completo' : 'Historial reciente');
 
-      if (d.messages.length === 0) {
+      if (total === 0) {
         list.innerHTML = `
           <div class="empty">
             <div class="empty-icon">${currentTab === 'pending' ? '📭' : '📋'}</div>
@@ -583,7 +608,7 @@
         return;
       }
 
-      list.innerHTML = sorted.map(m => `
+      list.innerHTML = visible.map(m => `
         <div class="msg-item" id="msg-${m.id}">
           <div>
             <div class="msg-phone">+${m.phone}</div>
@@ -602,7 +627,19 @@
             >✕</button>
           ` : ''}
         </div>
-      `).join('');
+      `).join('') + (
+        currentTab === 'all' && !historyExpanded && total > 8
+          ? `<button class="load-more" id="loadMoreBtn">Ver más (${total - 8} restantes)</button>`
+          : ''
+      );
+
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => {
+          historyExpanded = true;
+          loadMessages();
+        });
+      }
 
     } catch (e) {
       list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Error al cargar mensajes</div>';
@@ -749,6 +786,7 @@
   // ── TABS ──
   function setTab(tab) {
     currentTab = tab;
+    historyExpanded = false;
     document.querySelectorAll('.tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
