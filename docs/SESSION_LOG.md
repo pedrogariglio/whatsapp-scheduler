@@ -545,6 +545,8 @@
   - Detectado backup fallido por cambios en `.wwebjs_auth` durante `tar`.
   - Agregada pausa opcional del contenedor durante el backup (`BACKUP_PAUSE_CONTAINER`) y limpieza de archivos parciales.
   - Detectados 22 backups parciales sin checksum heredados; se agrego aviso automatico y se documenta limpieza manual.
+  - Validado backup con contenedor pausado: `sha256sum -c` OK, sin auth legacy y `whatsappReady=true` al reanudar.
+  - Eliminados los 22 backups parciales heredados.
   - Agregados 6 tests del session store; total 43 tests pasando.
   - `SESSION_TTL_DAYS` configurable (default 7 dias).
   - Validado en produccion: sin warning de `MemoryStore` y sesion del panel activa tras reiniciar el contenedor.
@@ -554,8 +556,6 @@
   - investigar stalls intermitentes `authenticated` -> `ready`
   - mantener `.wwebjs_auth.bak-*` unos dias mas antes de eliminarlo
   - confirmar que el proximo backup periodico no incluya el backup legacy de auth
-  - verificar un backup en produccion con contenedor pausado y checksum valido
-  - limpiar los backups parciales heredados tras validar uno nuevo
   - configurar `ALERT_WEBHOOK_URL` si se quieren alertas fuera de journal
   - verificar una alerta real ante `whatsappReady=false` o un stall
   - verificar en produccion que la limpieza de uploads no borre adjuntos pendientes

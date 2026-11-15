@@ -91,8 +91,8 @@
 - [x] Validar restore en directorio limpio con checksum OK y comparacion de archivos restaurados.
 - [x] Excluir `.wwebjs_auth.bak-*` de los backups periodicos mientras se conserva la copia manual.
 - [x] Pausar el contenedor durante el backup y eliminar archivos parciales si `tar` falla.
-- [ ] Verificar en produccion un backup con contenedor pausado y checksum valido.
-- [ ] Limpiar los backups parciales heredados (sin `.sha256`) tras validar uno nuevo.
+- [x] Verificar en produccion un backup con contenedor pausado y checksum valido.
+- [x] Limpiar los backups parciales heredados (sin `.sha256`) tras validar uno nuevo.
 - [ ] Confirmar en el proximo backup periodico que no se incluya `.wwebjs_auth.bak-*`.
 
 ## Monitoreo
