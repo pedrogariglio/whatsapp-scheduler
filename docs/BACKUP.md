@@ -59,6 +59,27 @@ Para deshabilitar el borrado por antiguedad:
 BACKUP_RETENTION_DAYS=0 npm run backup:state
 ```
 
+
+## Backups incompletos
+
+Un `.tar.gz` sin su `.sha256` no se considera un backup valido. El script avisa al final si encuentra archivos en esa situacion, pero no los elimina automaticamente.
+
+Listar:
+
+```bash
+for f in /opt/whatsapp-scheduler/backups/*.tar.gz; do
+  [ -f "$f.sha256" ] || echo "PARCIAL SIN CHECKSUM: $f"
+done
+```
+
+Eliminar solo despues de confirmar que existe un backup nuevo con checksum valido:
+
+```bash
+for f in /opt/whatsapp-scheduler/backups/*.tar.gz; do
+  [ -f "$f.sha256" ] || rm -f "$f"
+done
+```
+
 ## Verificar integridad
 ```bash
 cd /opt/whatsapp-scheduler/backups

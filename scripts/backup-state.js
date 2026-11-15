@@ -131,6 +131,17 @@ function listBackups() {
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
 }
 
+function warnIncompleteBackups() {
+  const incomplete = listBackups().filter(backup => !fs.existsSync(backup.checksumPath));
+
+  if (incomplete.length === 0) return;
+
+  console.warn(
+    `Backup: ${incomplete.length} archivo(s) .tar.gz sin checksum. ` +
+    'Revisar antes de restaurar; no se eliminan automaticamente.'
+  );
+}
+
 function pruneOldBackups() {
   if (retentionDays === 0) {
     console.log('Backup retention: age pruning disabled');
@@ -242,6 +253,7 @@ async function main() {
   console.log(`Checksum: ${checksumPath}`);
 
   pruneOldBackups();
+  warnIncompleteBackups();
 }
 
 main().catch(error => fail(error.message));
