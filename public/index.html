@@ -4,27 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WA Scheduler</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0e0e0e;
-      --surface:   #161616;
-      --border:    #2a2a2a;
-      --accent:    #25d366;
-      --accent-dim:#1a9e4a;
-      --danger:    #e05252;
-      --text:      #e8e8e8;
-      --muted:     #666;
-      --mono:      'IBM Plex Mono', monospace;
-      --sans:      'IBM Plex Sans', sans-serif;
+      --bg:            #f6f7f9;
+      --surface:       #ffffff;
+      --surface-muted: #f9fafb;
+      --border:        #e5e7eb;
+      --border-strong: #d1d5db;
+      --accent:        #111827;
+      --accent-dim:    #1f2937;
+      --accent-soft:   #eef2f7;
+      --danger:        #b91c1c;
+      --danger-soft:   #fef2f2;
+      --success:       #047857;
+      --success-soft:  #ecfdf5;
+      --warning:       #b45309;
+      --warning-soft:  #fffbeb;
+      --text:          #111827;
+      --muted:         #6b7280;
+      --focus-ring:    rgba(17, 24, 39, 0.08);
+      --shadow:        0 1px 2px rgba(16, 24, 40, 0.04);
+      --mono:          'IBM Plex Mono', monospace;
+      --sans:          'IBM Plex Sans', sans-serif;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--mono);
+      font-family: var(--sans);
       min-height: 100vh;
       padding: 0;
     }
@@ -161,7 +171,7 @@
     .btn-primary {
       background: var(--accent);
       border-color: var(--accent);
-      color: #000;
+      color: #ffffff;
       width: 100%;
     }
     .btn-primary:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
@@ -209,7 +219,7 @@
       align-items: start;
       transition: border-color 0.15s;
     }
-    .msg-item:hover { border-color: #3a3a3a; }
+    .msg-item:hover { border-color: var(--border-strong); }
 
     .msg-phone {
       font-size: 11px;
@@ -233,7 +243,7 @@
       align-items: center;
       flex-wrap: wrap;
     }
-    .msg-id { color: #444; }
+    .msg-id { color: #9ca3af; }
 
     .badge {
       font-size: 9px;
@@ -243,10 +253,10 @@
       padding: 2px 6px;
       border-radius: 2px;
     }
-    .badge-pending  { background: #2a2200; color: #f0a500; border: 1px solid #3a3000; }
-    .badge-sent     { background: #002a12; color: var(--accent); border: 1px solid #003d1a; }
-    .badge-failed   { background: #2a0a0a; color: var(--danger); border: 1px solid #3d1010; }
-    .badge-cancelled{ background: #1a1a1a; color: var(--muted); border: 1px solid var(--border); }
+    .badge-pending  { background: var(--warning-soft); color: var(--warning); border: 1px solid #fde68a; }
+    .badge-sent     { background: var(--success-soft); color: var(--success); border: 1px solid #a7f3d0; }
+    .badge-failed   { background: var(--danger-soft); color: var(--danger); border: 1px solid #fecaca; }
+    .badge-cancelled{ background: var(--surface-muted); color: var(--muted); border: 1px solid var(--border); }
 
     /* ── TABS ── */
     .tabs {
@@ -367,10 +377,60 @@
   }
 
     /* ── CHAR COUNTER ── */
-  #charCount.warning { color: #f0a500; }
+  #charCount.warning { color: var(--warning); }
   #charCount.danger  { color: var(--danger); }
 
-  .badge-retrying { background: #1a1200; color: #f0a500; border: 1px solid #2a2000; }
+  .badge-retrying { background: var(--warning-soft); color: var(--warning); border: 1px solid #fde68a; }
+
+    /* ── LIGHT THEME ── */
+    header { background: var(--surface); box-shadow: 0 1px 0 rgba(16, 24, 40, 0.03); }
+    .logo { font-family: var(--sans); font-size: 16px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; color: var(--text); }
+    .logo span { color: var(--muted); }
+    .status-badge { font-family: var(--sans); font-size: 12px; letter-spacing: 0; }
+    .status-dot.online { background: var(--success); box-shadow: 0 0 0 3px var(--success-soft); }
+    .status-dot.offline { background: var(--danger); }
+    main { max-width: 1080px; }
+    .panel { border-radius: 10px; box-shadow: var(--shadow); }
+    .panel-header { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); padding: 16px 20px; }
+    .panel-header .count { background: var(--surface-muted); color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+    label { font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text); }
+    input, textarea { background: var(--surface); border-color: var(--border-strong); border-radius: 8px; font-family: var(--sans); font-size: 14px; }
+    input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: none; }
+    .hint { font-family: var(--sans); font-size: 11px; }
+    .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; border-radius: 8px; }
+    .btn-primary { color: #ffffff; }
+    .btn-danger { background: var(--danger-soft); border-color: #fecaca; color: var(--danger); border-radius: 6px; }
+    .btn-danger:hover { background: var(--danger); border-color: var(--danger); color: #ffffff; }
+    #toast { font-family: var(--sans); font-size: 12px; border-radius: 8px; box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12); border-left-color: var(--success); }
+    #toast.error { border-left-color: var(--danger); }
+    .msg-list { gap: 8px; }
+    .msg-item { background: var(--surface); border-radius: 8px; padding: 14px 16px; }
+    .msg-item:hover { border-color: var(--border-strong); }
+    .msg-phone { font-family: var(--mono); font-size: 12px; color: var(--text); }
+    .msg-text { font-family: var(--sans); font-size: 14px; }
+    .msg-meta { font-family: var(--sans); font-size: 11px; }
+    .msg-id { color: #9ca3af; }
+    .badge { font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 0; text-transform: none; border-radius: 999px; padding: 2px 8px; }
+    .badge-pending, .badge-retrying { background: var(--warning-soft); color: var(--warning); border-color: #fde68a; }
+    .badge-sent { background: var(--success-soft); color: var(--success); border-color: #a7f3d0; }
+    .badge-failed { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; }
+    .badge-cancelled { background: var(--surface-muted); color: var(--muted); border-color: var(--border); }
+    .tab { font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .empty { background: var(--surface-muted); border-color: var(--border-strong); border-radius: 8px; font-family: var(--sans); font-size: 13px; }
+    .loading { font-family: var(--sans); font-size: 12px; letter-spacing: 0; }
+    .file-input-wrapper { background: var(--surface-muted); border-color: var(--border-strong); border-radius: 8px; }
+    .file-input-wrapper:hover { border-color: var(--accent); }
+    .file-label { font-family: var(--sans); font-size: 12px; }
+    .file-label.selected { color: var(--text); }
+    .suggestions { border-color: var(--border-strong); border-top: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.12); top: calc(100% + 4px); }
+    .suggestion-item { font-family: var(--sans); font-size: 13px; }
+    .suggestion-item:hover { background: var(--surface-muted); }
+    .suggestion-name { color: var(--text); }
+    .suggestion-phone { font-family: var(--mono); font-size: 11px; }
+    .suggestions-empty { font-family: var(--sans); font-size: 12px; }
+    #charCount.warning { color: var(--warning); }
   </style>
 </head>
 <body>

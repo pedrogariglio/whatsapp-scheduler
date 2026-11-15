@@ -4,95 +4,125 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WA Scheduler — Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #0e0e0e;
-      --surface:  #161616;
-      --border:   #2a2a2a;
-      --accent:   #25d366;
-      --accent-dim:#1a9e4a;
-      --danger:   #e05252;
-      --text:     #e8e8e8;
-      --muted:    #666;
-      --mono:     'IBM Plex Mono', monospace;
+      --bg:            #f6f7f9;
+      --surface:       #ffffff;
+      --surface-muted: #f9fafb;
+      --border:        #e5e7eb;
+      --border-strong: #d1d5db;
+      --accent:        #111827;
+      --accent-dim:    #1f2937;
+      --accent-soft:   #eef2f7;
+      --danger:        #b91c1c;
+      --danger-soft:   #fef2f2;
+      --success:       #047857;
+      --success-soft:  #ecfdf5;
+      --warning:       #b45309;
+      --warning-soft:  #fffbeb;
+      --text:          #111827;
+      --muted:         #6b7280;
+      --focus-ring:    rgba(17, 24, 39, 0.08);
+      --shadow:        0 12px 32px rgba(16, 24, 40, 0.08);
+      --mono:          'IBM Plex Mono', monospace;
+      --sans:          'IBM Plex Sans', sans-serif;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--mono);
+      font-family: var(--sans);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 24px;
     }
 
-    .login-box {
+    .login-box, .box {
       background: var(--surface);
       border: 1px solid var(--border);
-      padding: 40px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 36px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
     }
 
+    .box { max-width: 420px; }
+
     .logo {
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 20px;
       font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 32px;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 6px;
       text-align: center;
     }
     .logo span { color: var(--muted); font-weight: 400; }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 28px;
+    }
 
     .field { margin-bottom: 16px; }
 
     label {
       display: block;
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
       margin-bottom: 6px;
     }
 
     input {
       width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
       color: var(--text);
-      font-family: var(--mono);
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 14px;
       padding: 10px 12px;
       outline: none;
-      transition: border-color 0.15s;
+      border-radius: 8px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    input:focus { border-color: var(--accent); }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+    input::placeholder { color: var(--muted); }
+
+    .hint {
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--muted);
+    }
 
     .btn {
       width: 100%;
       background: var(--accent);
       border: 1px solid var(--accent);
-      color: #000;
-      font-family: var(--mono);
-      font-size: 11px;
+      color: #ffffff;
+      font-family: var(--sans);
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
       padding: 10px;
+      border-radius: 8px;
       cursor: pointer;
       margin-top: 8px;
-      transition: all 0.15s;
+      transition: background 0.15s, border-color 0.15s;
     }
     .btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .error {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--danger);
       margin-top: 12px;
       text-align: center;
@@ -104,6 +134,7 @@
 
 <div class="login-box">
   <div class="logo">WA<span>/</span>Scheduler</div>
+  <div class="subtitle">Acceso al panel</div>
 
   <div class="field">
     <label>Usuario</label>
